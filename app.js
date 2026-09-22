@@ -3,6 +3,7 @@ const $$ = s => [...document.querySelectorAll(s)];
 const DBKEY = 'lms_pwa_db_v2';
 const LEGACY_DBKEY = 'lms_pwa_db_v1';
 const SESSION = 'lms_pwa_session_v2';
+const ADMIN_EMAIL = 'kalimajasuryaalam@gmail.com';
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBOdU2TrXnhaXMMooq8RukAlYkC6D7JV-c",
@@ -218,13 +219,13 @@ const seed = {
     {id:'P006',name:'Paket Servis & Garansi',icon:'🧰',category:'Purna Jual',spec:'Registrasi unit, inspeksi, klaim dan riwayat servis',desc:'Setiap penerima mendapatkan kode unik sebagai identitas unit dan garansi.',active:true,image:''}
   ],
   beneficiaries:[
-    {id:'CPCL-2026-001',name:'Budi Santoso',group:'Poktan Makmur Jaya',phone:'0812-1111-2233',email:'penerima@demo.id',province:'Banten',village:'Desa Mekar Sari',lat:-6.25,lng:106.62,status:'Aktif',asset:'Pompa Hybrid 6 inchi',serial:'KSA-HYB-260001',warrantyCode:'LMS-BTN-260001',warrantyStart:'2026-09-01',warrantyMonths:12,userId:'U002',photo:''},
+    {id:'CPCL-2026-001',name:'Budi Santoso',group:'Poktan Makmur Jaya',phone:'0812-1111-2233',email:'penerima@listrikmasuksawah.id',province:'Banten',village:'Desa Mekar Sari',lat:-6.25,lng:106.62,status:'Aktif',asset:'Pompa Hybrid 6 inchi',serial:'KSA-HYB-260001',warrantyCode:'LMS-BTN-260001',warrantyStart:'2026-09-01',warrantyMonths:12,userId:'U002',photo:''},
     {id:'CPCL-2026-002',name:'Siti Aminah',group:'Poktan Tani Sejahtera',phone:'0813-2222-3344',email:'siti@example.id',province:'Jawa Barat',village:'Kec. Sukamaju',lat:-6.62,lng:107.44,status:'Siap Serah Terima',asset:'Pompa Hybrid 6 inchi',serial:'KSA-HYB-260002',warrantyCode:'LMS-JBR-260002',warrantyStart:'',warrantyMonths:12,userId:'',photo:''},
     {id:'CPCL-2026-003',name:'Rahmat',group:'Gapoktan Sumber Air',phone:'0812-8888-9900',email:'rahmat@example.id',province:'Jawa Tengah',village:'Desa Sumber Rejeki',lat:-7.15,lng:110.15,status:'Verifikasi',asset:'Pompa Hybrid 6 inchi',serial:'',warrantyCode:'',warrantyStart:'',warrantyMonths:12,userId:'',photo:''}
   ],
   users:[
-    {id:'U001',name:'Administrator',email:'admin@listrikmasuksawah.id',password:'admin123',role:'admin',status:'aktif'},
-    {id:'U002',name:'Budi Santoso',email:'penerima@demo.id',password:'user123',role:'user',status:'aktif',beneficiaryId:'CPCL-2026-001'}
+    {id:'U001',name:'Administrator',email:ADMIN_EMAIL,password:'',role:'admin',status:'aktif'},
+    {id:'U002',name:'Budi Santoso',email:'penerima@listrikmasuksawah.id',password:'user123',role:'user',status:'aktif',beneficiaryId:'CPCL-2026-001'}
   ],
   claims:[
     {id:'CLM-001',beneficiaryId:'CPCL-2026-001',date:'2026-09-15',type:'Pemeriksaan motor listrik',note:'Motor tidak start, cek sumber 3-phase dan overload.',status:'Diproses',adminNote:'Teknisi dijadwalkan melakukan pemeriksaan.',photo:''}
@@ -246,7 +247,25 @@ function normalizeDB(db){
   if(!out.settings.heroBgImage || /assets\/hero-sawah-riil/i.test(out.settings.heroBgImage)) out.settings.heroBgImage=EMBEDDED_HERO_BG;
   if(!out.settings.hybridCard.image || /assets\/pompa-sawah-riil/i.test(out.settings.hybridCard.image)) out.settings.hybridCard.image=EMBEDDED_PUMP_BG;
   ['products','beneficiaries','users','claims','audit'].forEach(k=>{ if(Array.isArray(db[k])) out[k]=db[k]; });
-  out.users=out.users.map(u=>{const demo=seed.users.find(s=>s.email===u.email);return {...u,password:u.password||demo?.password||''}});
+  // Production admin identity: email is public identity; password exists only in Firebase Authentication.
+  let adminUser=out.users.find(u=>u.role==='admin') || out.users.find(u=>String(u.email||'').toLowerCase()===ADMIN_EMAIL);
+  if(!adminUser){
+    adminUser={id:'U001',name:'Administrator',email:ADMIN_EMAIL,password:'',role:'admin',status:'aktif'};
+    out.users.unshift(adminUser);
+  }
+  adminUser.email=ADMIN_EMAIL;
+  adminUser.role='admin';
+  adminUser.status='aktif';
+  adminUser.password='';
+  out.users=out.users.filter((u,i,a)=>{
+    const mail=String(u.email||'').toLowerCase();
+    if(mail==='admin@listrikmasuksawah.id') return false;
+    if(mail===ADMIN_EMAIL) return u===adminUser;
+    return true;
+  });
+  out.beneficiaries.forEach(b=>{if(b.email==='penerima@demo.id')b.email='penerima@listrikmasuksawah.id';});
+  out.users.forEach(u=>{if(u.email==='penerima@demo.id')u.email='penerima@listrikmasuksawah.id';});
+  out.users=out.users.map(u=>{const seedUser=seed.users.find(s=>s.email===u.email);return {...u,password:u.role==='admin'?'':(u.password||seedUser?.password||'')}});
   if(!out.settings.footerText || out.settings.footerText==='Sistem informasi bantuan pompa irigasi hybrid.' || out.settings.footerText==='Mengalirkan Energi ke Sawah, Menguatkan Petani, Menumbuhkan Panen Negeri.') out.settings.footerText='Listrik untuk Sawah, Energi untuk Negeri.';
   out.products = out.products.map(p=>({image:'',active:true,...p})).map(p=>{
     if(p.name==='Pompa Irigasi Hybrid 4"') p.name='Pompa Irigasi Hybrid 6"';
@@ -278,7 +297,7 @@ function renderAll(){ renderPublic(); const u=currentUser(); if(u && !$('#dashbo
 function resetDB(){
   localStorage.setItem(DBKEY,JSON.stringify(clone(seed)));
   sessionStorage.removeItem(SESSION);
-  renderPublic(); logout(false); toast('Data demo berhasil direset');
+  renderPublic(); logout(false); toast('Data aplikasi berhasil direset');
 }
 function uid(prefix){return prefix+'-'+Math.random().toString(36).slice(2,8).toUpperCase()}
 function warrantyCode(province='ID'){
@@ -541,20 +560,45 @@ function closeAuth(){ $('#authView').hidden=true;$('#publicView').hidden=false;d
 function switchAuthTab(tab){ $$('.auth-tabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.authTab===tab));$('#loginForm').hidden=tab!=='login';$('#registerForm').hidden=tab!=='register'; }
 async function login(email,password){
   const mail=email.trim().toLowerCase(),db=getDB();
-  let u=db.users.find(x=>x.email.toLowerCase()===mail);
-  if(u&&u.status!=='aktif')return toast('Akun tidak aktif');
+  let u=db.users.find(x=>String(x.email||'').toLowerCase()===mail);
+
+  if(u&&u.status!=='aktif') return toast('Akun tidak aktif');
+
+  // Production admin must authenticate through Firebase Authentication.
+  if(mail===ADMIN_EMAIL){
+    if(!firebaseAuth) return toast('Firebase Authentication belum siap. Periksa koneksi internet.');
+    try{
+      const cred=await firebaseAuth.signInWithEmailAndPassword(mail,password);
+      if(!u){
+        u={id:'U001',uid:cred.user.uid,name:'Administrator',email:ADMIN_EMAIL,password:'',role:'admin',status:'aktif'};
+        db.users.unshift(u);
+      }
+      u.uid=cred.user.uid;
+      u.name=u.name||'Administrator';
+      u.email=ADMIN_EMAIL;
+      u.role='admin';
+      u.status='aktif';
+      u.password='';
+      saveDB(db);
+      await pushCloudNow(db);
+      sessionStorage.setItem(SESSION,u.id);
+      audit('LOGIN','Admin masuk melalui Firebase Authentication');
+      showDashboard();
+      return;
+    }catch(err){
+      console.warn('Admin Firebase login gagal',err);
+      return toast(err.code==='auth/operation-not-allowed'
+        ? 'Aktifkan Email/Password di Firebase Authentication.'
+        : 'Login admin gagal. Periksa akun Firebase Authentication dan password.');
+    }
+  }
+
+  // All other online users also authenticate against Firebase.
   if(firebaseAuth){
     try{
-      let cred;
-      try{
-        cred=await firebaseAuth.signInWithEmailAndPassword(mail,password);
-      }catch(err){
-        const canBootstrap=u&&u.password&&u.password===password&&['auth/user-not-found','auth/invalid-credential'].includes(err.code);
-        if(!canBootstrap)throw err;
-        cred=await firebaseAuth.createUserWithEmailAndPassword(mail,password);
-      }
+      const cred=await firebaseAuth.signInWithEmailAndPassword(mail,password);
       if(!u){
-        u={id:uid('U'),uid:cred.user.uid,name:mail.split('@')[0],email:mail,role:'user',status:'aktif',beneficiaryId:''};
+        u={id:uid('U'),uid:cred.user.uid,name:mail.split('@')[0],email:mail,password:'',role:'user',status:'aktif',beneficiaryId:''};
         db.users.push(u);
       }
       u.uid=cred.user.uid;
@@ -566,17 +610,17 @@ async function login(email,password){
       showDashboard();
       return;
     }catch(err){
-      console.warn(err);
+      console.warn('Firebase login gagal',err);
       return toast(err.code==='auth/operation-not-allowed'
-        ?'Aktifkan Email/Password di Firebase Authentication'
-        :'Login Firebase gagal. Periksa email/password.');
+        ? 'Aktifkan Email/Password di Firebase Authentication.'
+        : 'Login gagal. Periksa email dan password.');
     }
   }
-  if(!u||u.password!==password)return toast('Email/password salah atau akun tidak aktif');
-  sessionStorage.setItem(SESSION,u.id);
-  audit('LOGIN','Masuk dashboard lokal');
-  showDashboard();
+
+  // No local fallback for production credentials.
+  return toast('Firebase Authentication belum tersedia. Periksa koneksi internet.');
 }
+
 function showDashboard(){
   const u=currentUser();if(!u){openAuth('login');return} document.body.style.overflow='';
   $('#publicView').hidden=true;$('#authView').hidden=true;$('#dashboardView').hidden=false;$('#loginBtn').hidden=true;$('#logoutBtn').hidden=false;$('#mobileBottom').style.display='none';
@@ -695,7 +739,7 @@ function adminPage(page){
   }
   if(page==='settings'){
     return `<div class="grid-2"><div class="panel"><h3>Pengaturan Website</h3><form id="settingsForm" class="dash-form"><label>Nama Program<input name="siteName" value="${esc(db.settings.siteName)}"></label><label>Judul Utama<input name="heroTitle" value="${esc(db.settings.heroTitle)}"></label><label>Deskripsi Utama<textarea name="heroText" rows="4">${esc(db.settings.heroText)}</textarea></label><label>Teks Footer<input name="footerText" value="${esc(db.settings.footerText)}"></label><label>URL Foto Latar Hero<input name="heroBgImage" value="${esc(db.settings.heroBgImage||'')}" placeholder="assets/hero-sawah-riil-terang.png atau https://..."></label><label>Upload Foto Latar Hero<input name="heroBgFile" type="file" accept="image/*"></label><small class="muted">Gunakan foto persawahan / pemompaan air sawah agar tampilan lebih hidup.</small><div><button class="primary">Simpan Perubahan</button></div></form></div>
-      <div class="panel"><h3>Data & Backup</h3><p class="muted">Backup menyimpan seluruh CPCL, user, produk, garansi, klaim, dan pengaturan dalam file JSON.</p><div class="action-stack"><button class="ghost" id="backupData">⬇ Backup JSON</button><button class="ghost" id="restoreData">⬆ Restore JSON</button><button class="ghost" id="exportAllCPCL">📄 Export CPCL CSV</button><button class="danger" id="resetDemo">Reset Data Demo</button></div><input type="file" id="restoreFile" accept="application/json,.json" hidden></div></div>`;
+      <div class="panel"><h3>Data & Backup</h3><p class="muted">Backup menyimpan seluruh CPCL, user, produk, garansi, klaim, dan pengaturan dalam file JSON.</p><div class="action-stack"><button class="ghost" id="backupData">⬇ Backup JSON</button><button class="ghost" id="restoreData">⬆ Restore JSON</button><button class="ghost" id="exportAllCPCL">📄 Export CPCL CSV</button><button class="danger" id="resetData">Reset Data Aplikasi</button></div><input type="file" id="restoreFile" accept="application/json,.json" hidden></div></div>`;
   }
   if(page==='audit'){
     return `<div class="panel"><div class="panel-title-row"><h3>Log Aktivitas</h3><button class="danger" id="clearAudit">Bersihkan Log</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Waktu</th><th>User</th><th>Aksi</th><th>Detail</th></tr></thead><tbody>${db.audit.map(a=>`<tr><td>${new Date(a.at).toLocaleString('id-ID')}</td><td>${esc(a.user)}</td><td>${esc(a.action)}</td><td>${esc(a.detail)}</td></tr>`).join('')||'<tr><td colspan="4">Belum ada log.</td></tr>'}</tbody></table></div></div>`;
@@ -850,7 +894,7 @@ function bindDashActions(page,u){
     $('#restoreData')?.addEventListener('click',()=>$('#restoreFile').click());
     $('#restoreFile')?.addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const data=normalizeDB(JSON.parse(r.result));if(!confirm('Restore akan mengganti data aplikasi saat ini. Lanjutkan?'))return;saveDB(data);audit('RESTORE_DATA',file.name);navigateDash('settings');renderPublic();toast('Restore berhasil')}catch(err){toast('File backup tidak valid')}};r.readAsText(file)});
     $('#exportAllCPCL')?.addEventListener('click',exportCPCLCSV);
-    $('#resetDemo')?.addEventListener('click',()=>{if(confirm('Reset seluruh data demo? Semua perubahan lokal akan hilang.'))resetDB()});
+    $('#resetData')?.addEventListener('click',()=>{if(confirm('Reset data aplikasi pada perangkat ini? Data cache lokal akan dikembalikan ke kondisi awal.'))resetDB()});
     $('#clearAudit')?.addEventListener('click',()=>{if(!confirm('Bersihkan seluruh log aktivitas?'))return;const db=getDB();db.audit=[];saveDB(db);navigateDash('audit');toast('Log dibersihkan')});
   } else {
     const db=getDB(),b=db.beneficiaries.find(x=>x.id===u.beneficiaryId);

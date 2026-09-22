@@ -1,15 +1,16 @@
-# Listrik Masuk Sawah — PWA Full Functional Prototype
+# Listrik Masuk Sawah — PWA Full Functional aplikasi
 
 Aplikasi HTML + PWA untuk pengelolaan program Listrik Masuk Sawah dan pompa irigasi hybrid.
 
-## Login demo
-Admin:
-- admin@listrikmasuksawah.id
-- admin123
+## Login
+Admin menggunakan **Firebase Authentication**.
 
-User penerima:
-- penerima@demo.id
-- user123
+Email admin:
+- `kalimajasuryaalam@gmail.com`
+
+Password admin tidak disimpan di source code. Masukkan password secara langsung saat membuat user di Firebase Authentication dan saat login.
+
+User penerima dibuat melalui sistem/Firebase Authentication sesuai akun masing-masing.
 
 ## Fungsi yang aktif
 ### Publik
@@ -32,7 +33,7 @@ User penerima:
 - Ubah konten website
 - Backup seluruh data JSON
 - Restore data JSON
-- Reset demo
+- Reset data aplikasi
 - Audit log
 
 ### User / penerima manfaat
@@ -53,7 +54,7 @@ python -m http.server 8080
 Kemudian buka http://localhost:8080
 
 ## Catatan produksi
-Versi ini sudah fungsional sebagai prototype single-browser dan menyimpan data di localStorage. Untuk pemakaian lapangan multi-user sungguhan, pindahkan data dan autentikasi ke backend seperti Firebase Authentication + Firestore + Storage agar data tersinkron antar perangkat dan keamanan login tidak bergantung pada browser lokal.
+Aplikasi sudah terhubung ke Firebase untuk autentikasi dan sinkronisasi data online. Penyimpanan lokal digunakan sebagai cache/fallback.
 
 ## Interaksi kartu (V3)
 - Kartu Pompa Hybrid dan seluruh produk dapat diklik untuk membuka detail.
@@ -99,9 +100,9 @@ Paket ini sudah disiapkan untuk static hosting Vercel:
 - `vercel.json` untuk routing dan header PWA
 - service worker cache versi v12
 - `robots.txt`
-- footer prototype/demo sudah dihapus
+- footer status sementara sudah dihapus
 
-Catatan: versi ini dapat dipublikasikan online, tetapi data aplikasi masih memakai localStorage per perangkat.
+Aplikasi dipersiapkan untuk penggunaan online dengan Firebase; penyimpanan lokal hanya berfungsi sebagai cache/fallback.
 Agar admin dan user dari perangkat berbeda memakai data yang sama, tahap berikutnya adalah menghubungkan backend/database online seperti Firebase Authentication + Firestore + Storage.
 
 
@@ -119,7 +120,22 @@ Versi v13 sudah terhubung ke Firebase project `hybrid-cbb57` menggunakan:
 3. Storage → buat bucket jika belum ada.
 4. Terapkan `firestore.rules` dan `storage.rules` dari paket ini.
 
-Akun admin lama `admin@listrikmasuksawah.id` dapat dibuat otomatis di Firebase Authentication pada login pertama jika Email/Password sudah aktif dan password lokal masih sesuai. Setelah berhasil masuk, segera ganti password admin.
-
 ### Catatan keamanan / skala
 Versi ini memakai satu dokumen Firestore untuk mempertahankan kompatibilitas seluruh fitur HTML yang sudah kita bangun. Ini sudah dapat menyinkronkan data antar perangkat, tetapi rules saat ini mengizinkan user yang sudah login untuk menulis dokumen sinkronisasi. Sebelum pemakaian produksi berskala besar, data sebaiknya dipecah menjadi collection `users`, `beneficiaries`, `claims`, `products`, dan `settings` dengan rule per-role yang lebih ketat.
+
+
+## Admin Firebase Authentication
+Admin produksi:
+- `kalimajasuryaalam@gmail.com`
+
+Keamanan:
+- password tidak berada di `app.js`, HTML, Firestore, localStorage, README, atau file konfigurasi;
+- login admin dilakukan dengan `signInWithEmailAndPassword`;
+- role admin dikenali berdasarkan email admin produksi setelah Firebase Authentication berhasil.
+
+Setup sekali:
+1. Firebase Console → Authentication.
+2. Aktifkan provider **Email/Password**.
+3. Users → **Add user**.
+4. Masukkan email admin di atas.
+5. Masukkan password admin yang sudah Anda tentukan.
