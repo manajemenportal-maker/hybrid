@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f6b3b" />
+  <meta name="description" content="PWA Program Listrik Masuk Sawah - Pompa Irigasi Hybrid, CPCL, Garansi dan Monitoring Bantuan." />
+  <title>Listrik Masuk Sawah</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://unpkg.com">
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">⚡</div>
+      <div>
+        <strong id="siteName">Listrik Masuk Sawah</strong>
+        <small id="siteMotto">Listrik untuk Sawah, Energi untuk Negeri.</small>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="cloudStatus" class="cloud-status" title="Status database online">Menghubungkan...</span>
+      <button class="ghost" id="installBtn" hidden>Install PWA</button>
+      <button class="ghost" id="loginBtn">Masuk</button>
+      <button class="ghost" id="logoutBtn" hidden>Keluar</button>
+    </div>
+  </header>
+
+  <main id="app">
+    <section id="publicView">
+      <section class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow">Program elektrifikasi pertanian</span>
+          <h1 id="heroTitle">Pompa irigasi hybrid untuk sawah yang lebih tangguh.</h1>
+          <p id="heroText">Satu sistem, dua sumber penggerak: motor diesel dan motor listrik. Aplikasi ini juga mengelola CPCL, lokasi kelompok, rumah pompa, bantuan, garansi, serta layanan purna jual.</p>
+          <div class="hero-actions">
+            <button class="primary" data-scroll="#produk">Lihat Peralatan</button>
+            <button class="secondary" data-scroll="#cpcl">Lihat CPCL & Titik Kelompok</button>
+          </div>
+          <div class="hero-stats">
+            <div class="click-card" data-summary="beneficiaries" role="button" tabindex="0"><b id="statBeneficiaries">0</b><span>Penerima</span><small>Klik untuk detail</small></div>
+            <div class="click-card" data-summary="groups" role="button" tabindex="0"><b id="statGroups">0</b><span>Kelompok</span><small>Klik untuk detail</small></div>
+            <div class="click-card" data-summary="warranty" role="button" tabindex="0"><b id="statWarranty">0</b><span>Garansi Aktif</span><small>Klik untuk detail</small></div>
+          </div>
+        </div>
+        <div class="hero-card click-card" data-summary="hybrid" role="button" tabindex="0">
+          <div class="hybrid-visual">
+            <div class="pump-core">POMPA<br><strong>HYBRID</strong></div>
+            <div class="drive diesel">DIESEL<br><small>12 HP*</small></div>
+            <div class="shaft">⇄</div>
+            <div class="drive electric">MOTOR<br><small>7,5 kW*</small></div>
+          </div>
+          <p class="muted">*Konfigurasi contoh. Spesifikasi dapat diubah oleh admin sesuai paket proyek.</p>
+        </div>
+      </section>
+
+      <section class="section" id="produk">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Katalog peralatan</span>
+            <h2>Peralatan Program</h2>
+          </div>
+          <input class="search" id="productSearch" placeholder="Cari produk..." />
+        </div>
+        <div id="productGrid" class="card-grid"></div>
+      </section>
+
+      <section class="section alt" id="cpcl">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Calon penerima calon lokasi</span>
+            <h2>CPCL & Titik Kelompok</h2>
+          </div>
+          <div class="filter-row">
+            <select id="provinceFilter"><option value="">Semua Provinsi</option></select>
+            <select id="statusFilter">
+              <option value="">Semua Status</option>
+              <option>Verifikasi</option>
+              <option>Siap Serah Terima</option>
+              <option>Aktif</option>
+            </select>
+          </div>
+        </div>
+        <div class="map-shell">
+          <div class="map-placeholder" id="mapPlaceholder">
+            <div class="map-pattern"></div>
+            <div class="map-label">Peta titik kelompok</div>
+            <div id="mapPins"></div>
+          </div>
+          <div id="cpclList" class="cpcl-list"></div>
+        </div>
+      </section>
+
+      <section class="section" id="rumahPompa">
+        <span class="eyebrow">Referensi teknis</span>
+        <h2>Referensi Rumah Pompa Hybrid</h2>
+        <div class="house-grid" id="houseGrid"></div>
+        <div class="spec-strip">
+          <span>✓ Ventilasi silang</span><span>✓ Drainase lantai</span><span>✓ Panel listrik terlindung</span>
+          <span>✓ Guard komponen berputar</span><span>✓ Ruang servis</span><span>✓ Jalur pipa lurus & mudah dibongkar</span>
+        </div>
+      </section>
+
+      <section class="section alt" id="garansi">
+        <div class="warranty-public">
+          <div>
+            <span class="eyebrow">Garansi bantuan</span>
+            <h2>Cek Status Garansi</h2>
+            <p>Masukkan kode unik yang diterima saat registrasi serah terima bantuan.</p>
+          </div>
+          <form id="warrantyCheckForm" class="inline-form">
+            <input id="warrantyCodeCheck" placeholder="Contoh: LMS-AB12CD34" required />
+            <button class="primary">Cek Garansi</button>
+          </form>
+          <div id="warrantyCheckResult"></div>
+        </div>
+      </section>
+    </section>
+
+    <section id="authView" class="auth-view" hidden>
+      <div class="auth-card">
+        <button class="close-x" id="closeAuth">×</button>
+        <div class="auth-tabs">
+          <button class="tab active" data-auth-tab="login">Masuk</button>
+          <button class="tab" data-auth-tab="register">Registrasi Penerima</button>
+        </div>
+
+        <form id="loginForm" class="form-stack">
+          <h2>Masuk Dashboard</h2>
+          <label>Email<input id="loginEmail" type="email" value="admin@listrikmasuksawah.id" required></label>
+          <label>Password<input id="loginPassword" type="password" value="admin123" required></label>
+          <button class="primary">Masuk</button>
+          <div class="demo-box">
+            <b>Akun demo</b>
+            <span>Admin: admin@listrikmasuksawah.id / admin123</span>
+            <span>User: penerima@demo.id / user123</span>
+          </div>
+        </form>
+
+        <form id="registerForm" class="form-stack" hidden>
+          <h2>Registrasi Serah Terima Bantuan</h2>
+          <label>Nama Penerima<input id="regName" required></label>
+          <label>Nama Kelompok Tani<input id="regGroup" required></label>
+          <label>No. HP / WhatsApp<input id="regPhone" required></label>
+          <label>Email<input id="regEmail" type="email" required></label>
+          <label>Desa / Kecamatan<input id="regVillage" required></label>
+          <label>ID Bantuan / Nomor CPCL<input id="regCpcl" placeholder="Mis. CPCL-2026-001" required></label>
+          <button class="primary">Daftar & Buat Kode Garansi</button>
+          <small class="muted">Kode garansi dibuat otomatis setelah data pertama kali terdaftar.</small>
+        </form>
+      </div>
+    </section>
+
+    <section id="detailView" class="detail-view" hidden aria-modal="true" role="dialog" aria-labelledby="detailTitle">
+      <div class="detail-card">
+        <button class="close-x" id="closeDetail" aria-label="Tutup detail">×</button>
+        <div class="detail-head">
+          <span class="eyebrow" id="detailEyebrow">DETAIL</span>
+          <h2 id="detailTitle">Detail</h2>
+          <p id="detailSubtitle" class="muted"></p>
+        </div>
+        <div id="detailBody"></div>
+      </div>
+    </section>
+
+    <section id="dashboardView" hidden>
+      <div class="dashboard-shell">
+        <aside class="sidebar">
+          <div class="role-chip" id="roleChip">USER</div>
+          <h3 id="dashName">Dashboard</h3>
+          <nav id="dashNav"></nav>
+        </aside>
+        <section class="dashboard-main">
+          <div class="dashboard-header">
+            <div>
+              <small id="dashWelcome">Selamat datang</small>
+              <h1 id="dashTitle">Ringkasan</h1>
+            </div>
+            <button class="ghost mobile-only" id="toggleSidebar">☰ Menu</button>
+          </div>
+          <div id="dashContent"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div><strong>Listrik Masuk Sawah</strong><br><span id="footerText">Sistem informasi bantuan pompa irigasi hybrid.</span></div>
+  </footer>
+
+  <nav class="mobile-bottom" id="mobileBottom">
+    <button data-scroll="#produk"><span>⚙️</span>Produk</button>
+    <button data-scroll="#cpcl"><span>📍</span>CPCL</button>
+    <button data-scroll="#garansi"><span>🛡️</span>Garansi</button>
+    <button id="mobileAccount"><span>👤</span>Akun</button>
+  </nav>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

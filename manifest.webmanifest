@@ -1,0 +1,17 @@
+{
+  "name": "Listrik Masuk Sawah",
+  "short_name": "LMS",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fbfcfa",
+  "theme_color": "#0f6b3b",
+  "description": "PWA pengelolaan pompa irigasi hybrid, CPCL, bantuan dan garansi.",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
