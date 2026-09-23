@@ -138,14 +138,19 @@
 
         <form id="registerForm" class="form-stack" hidden>
           <h2>Registrasi Serah Terima Bantuan</h2>
-          <label>Nama Penerima<input id="regName" required></label>
-          <label>Nama Kelompok Tani<input id="regGroup" required></label>
-          <label>No. HP / WhatsApp<input id="regPhone" required></label>
-          <label>Email<input id="regEmail" type="email" required></label>
-          <label>Desa / Kecamatan<input id="regVillage" required></label>
-          <label>ID Bantuan / Nomor CPCL<input id="regCpcl" placeholder="Mis. CPCL-2026-001" required></label>
-          <button class="primary">Daftar & Buat Kode Garansi</button>
-          <small class="muted">Kode garansi dibuat otomatis setelah data pertama kali terdaftar.</small>
+          <label>Nama Penerima<input id="regName" name="name" autocomplete="name" required></label>
+          <label>Nama Kelompok Tani<input id="regGroup" name="group" required></label>
+          <label>No. HP / WhatsApp<input id="regPhone" name="phone" inputmode="tel" autocomplete="tel" required></label>
+          <label>Email<input id="regEmail" name="email" type="email" autocomplete="email" required></label>
+          <label>Provinsi<select id="regProvince" name="province" required><option value="">Pilih Provinsi</option></select></label>
+          <label>Desa / Kecamatan<input id="regVillage" name="village" required></label>
+          <label>ID Bantuan / Nomor CPCL<input id="regCpcl" name="cpcl" placeholder="Mis. CPCL-2026-001" autocomplete="off" required></label>
+          <label>Buat Password<input id="regPassword" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="Minimal 6 karakter" required></label>
+          <label>Ulangi Password<input id="regPasswordConfirm" name="passwordConfirm" type="password" minlength="6" autocomplete="new-password" required></label>
+          <label class="consent-row"><input id="regConsent" name="consent" type="checkbox" required> <span>Saya menyatakan data serah terima yang diisi benar.</span></label>
+          <button class="primary" id="registerSubmit" type="submit">Daftar & Buat Kode Garansi</button>
+          <div id="registerMessage" class="form-message" role="status" aria-live="polite"></div>
+          <small class="muted">Setelah berhasil, akun penerima dibuat di Firebase dan kode garansi aktif tersimpan secara online.</small>
         </form>
       </div>
     </section>

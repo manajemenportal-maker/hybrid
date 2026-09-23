@@ -557,7 +557,7 @@ function openSummaryDetail(type){
 
 function openAuth(tab='login'){ $('#authView').hidden=false;$('#dashboardView').hidden=true;$('#publicView').hidden=false;document.body.style.overflow='hidden';switchAuthTab(tab); }
 function closeAuth(){ $('#authView').hidden=true;$('#publicView').hidden=false;document.body.style.overflow=''; }
-function switchAuthTab(tab){ $$('.auth-tabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.authTab===tab));$('#loginForm').hidden=tab!=='login';$('#registerForm').hidden=tab!=='register'; }
+function switchAuthTab(tab){ $$('.auth-tabs .tab').forEach(b=>b.classList.toggle('active',b.dataset.authTab===tab));$('#loginForm').hidden=tab!=='login';$('#registerForm').hidden=tab!=='register';if(tab==='register')setRegisterMessage(''); }
 async function login(email,password){
   const mail=email.trim().toLowerCase(),db=getDB();
   let u=db.users.find(x=>String(x.email||'').toLowerCase()===mail);
@@ -908,44 +908,101 @@ function bindDashActions(page,u){
 }
 function auditLater(db,action,detail){const u=currentUser();db.audit.unshift({id:uid('LOG'),at:new Date().toISOString(),user:u?.email||'public',action,detail});db.audit=db.audit.slice(0,250)}
 
+function setRegisterMessage(message='',state=''){
+  const el=$('#registerMessage'); if(!el)return;
+  el.textContent=message; el.className='form-message '+state;
+}
+function setRegisterBusy(busy){
+  const btn=$('#registerSubmit'); if(!btn)return;
+  btn.disabled=busy;
+  btn.textContent=busy?'Mendaftarkan...':'Daftar & Buat Kode Garansi';
+}
+
 async function registerBeneficiary(form){
-  const f=new FormData(form),db=getDB(),cpcl=f.get('cpcl').trim(),email=f.get('email').trim().toLowerCase();
-  let b=db.beneficiaries.find(x=>x.id===cpcl);
-  if(b&&b.userId)return toast('CPCL ini sudah terdaftar ke user');
-  if(db.users.some(x=>x.email.toLowerCase()===email))return toast('Email sudah terdaftar');
-  const code=warrantyCode(b?.province||'ID'),userId=uid('U'),tempPassword='Lms'+Math.random().toString(36).slice(2,8).toUpperCase();
-  let authUid='';
-  if(firebaseAuth){
-    try{
-      const cred=await firebaseAuth.createUserWithEmailAndPassword(email,tempPassword);
-      authUid=cred.user.uid;
-    }catch(err){
-      return toast(err.code==='auth/email-already-in-use'?'Email sudah ada di Firebase Authentication':'Gagal membuat akun online');
+  setRegisterMessage('');
+  if(!firebaseAuth||!firebaseDb){
+    setRegisterMessage('Koneksi Firebase belum siap. Periksa internet lalu coba lagi.','error');
+    return toast('Firebase belum siap');
+  }
+
+  const f=new FormData(form);
+  const name=String(f.get('name')||'').trim();
+  const group=String(f.get('group')||'').trim();
+  const phone=String(f.get('phone')||'').trim();
+  const email=String(f.get('email')||'').trim().toLowerCase();
+  const province=String(f.get('province')||'').trim();
+  const village=String(f.get('village')||'').trim();
+  const cpcl=String(f.get('cpcl')||'').trim().toUpperCase();
+  const password=String(f.get('password')||'');
+  const passwordConfirm=String(f.get('passwordConfirm')||'');
+
+  if(!name||!group||!phone||!email||!province||!village||!cpcl){
+    setRegisterMessage('Lengkapi seluruh data registrasi.','error'); return;
+  }
+  if(password.length<6){setRegisterMessage('Password minimal 6 karakter.','error');return}
+  if(password!==passwordConfirm){setRegisterMessage('Konfirmasi password tidak sama.','error');return}
+  if(!f.get('consent')){setRegisterMessage('Centang pernyataan kebenaran data.','error');return}
+  if(!/^CPCL-[A-Z0-9-]+$/i.test(cpcl)){
+    setRegisterMessage('Format nomor CPCL belum sesuai. Contoh: CPCL-2026-001.','error'); return;
+  }
+
+  const originalDb=getDB();
+  const db=clone(originalDb);
+  let b=db.beneficiaries.find(x=>String(x.id||'').toUpperCase()===cpcl);
+  if(b&&b.userId){setRegisterMessage('Nomor CPCL ini sudah terhubung ke akun penerima.','error');return}
+  if(db.users.some(x=>String(x.email||'').toLowerCase()===email)){
+    setRegisterMessage('Email ini sudah terdaftar. Silakan gunakan menu Masuk.','error');return;
+  }
+
+  setRegisterBusy(true);
+  setRegisterMessage('Membuat akun Firebase dan mengaktifkan garansi...','working');
+
+  let cred=null;
+  try{
+    cred=await firebaseAuth.createUserWithEmailAndPassword(email,password);
+    const authUid=cred.user.uid;
+    const code=b?.warrantyCode||warrantyCode(province);
+    const userId=uid('U');
+    const today=new Date().toISOString().slice(0,10);
+
+    if(!b){
+      b={id:cpcl,name,group,phone,email,province,village,lat:null,lng:null,status:'Aktif',asset:'Pompa Hybrid 6 inchi',serial:'',warrantyCode:code,warrantyStart:today,warrantyMonths:12,userId,photo:''};
+      db.beneficiaries.push(b);
+    }else{
+      b.name=name;b.group=group;b.phone=phone;b.email=email;b.province=province;b.village=village;
+      b.userId=userId;b.status='Aktif';b.warrantyCode=code;b.warrantyStart=b.warrantyStart||today;
     }
-  }
-  if(!b){
-    b={id:cpcl,name:f.get('name'),group:f.get('group'),phone:f.get('phone'),email,province:'Belum diisi',village:f.get('village'),lat:null,lng:null,status:'Aktif',asset:'Pompa Hybrid 6 inchi',serial:'',warrantyCode:code,warrantyStart:new Date().toISOString().slice(0,10),warrantyMonths:12,userId,photo:''};
-    db.beneficiaries.push(b);
-  }else{
-    b.name=f.get('name');b.group=f.get('group');b.phone=f.get('phone');b.email=email;b.village=f.get('village');b.userId=userId;b.status='Aktif';b.warrantyCode=b.warrantyCode||code;b.warrantyStart=b.warrantyStart||new Date().toISOString().slice(0,10);
-  }
-  db.users.push({id:userId,uid:authUid,name:f.get('name'),email,password:firebaseAuth?'':tempPassword,role:'user',status:'aktif',beneficiaryId:b.id});
-  auditLater(db,'REGISTRASI_PENERIMA',`${b.id} ${b.warrantyCode}`);
-  saveDB(db);
-  if(firebaseAuth)await pushCloudNow(db);
-  if(firebaseAuth?.currentUser)await firebaseAuth.signOut();
-  form.reset();
-  switchAuthTab('login');
-  $('#loginEmail').value=email;
-  $('#loginPassword').value=tempPassword;
-  renderPublic();
-  toast(`Registrasi berhasil. Kode: ${b.warrantyCode}`);
-  alert(`REGISTRASI BERHASIL
 
-Kode Garansi: ${b.warrantyCode}
-Password awal: ${tempPassword}
+    db.users.push({id:userId,uid:authUid,name,email,password:'',role:'user',status:'aktif',beneficiaryId:b.id});
+    auditLater(db,'REGISTRASI_PENERIMA',`${b.id} ${b.warrantyCode}`);
+    localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));
 
-Simpan kode garansi dan password awal ini.`);
+    const synced=await pushCloudNow(db);
+    if(!synced) throw new Error('firestore-save-failed');
+
+    sessionStorage.setItem(SESSION,userId);
+    form.reset();
+    renderPublic();
+    setRegisterMessage('Registrasi berhasil. Membuka dashboard penerima...','success');
+    toast(`Registrasi berhasil • Kode garansi ${b.warrantyCode}`);
+    alert(`REGISTRASI BERHASIL\n\nNomor CPCL: ${b.id}\nKode Garansi: ${b.warrantyCode}\n\nAkun Anda sudah aktif dan tersimpan online.`);
+    showDashboard();
+  }catch(err){
+    console.warn('Registrasi Firebase gagal',err);
+    localStorage.setItem(DBKEY,JSON.stringify(originalDb));
+    if(cred?.user){try{await cred.user.delete()}catch(e){console.warn('Rollback auth gagal',e)}}
+    let msg='Registrasi gagal. Silakan coba lagi.';
+    if(err?.code==='auth/email-already-in-use') msg='Email sudah terdaftar di Firebase. Gunakan menu Masuk atau email lain.';
+    else if(err?.code==='auth/invalid-email') msg='Format email tidak valid.';
+    else if(err?.code==='auth/weak-password') msg='Password terlalu lemah. Gunakan minimal 6 karakter.';
+    else if(err?.code==='auth/operation-not-allowed') msg='Provider Email/Password belum diaktifkan di Firebase Authentication.';
+    else if(err?.code==='auth/network-request-failed') msg='Koneksi internet ke Firebase gagal. Coba lagi setelah koneksi stabil.';
+    else if(err?.message==='firestore-save-failed') msg='Akun belum disimpan karena Firestore menolak sinkronisasi. Periksa Firestore Rules.';
+    setRegisterMessage(msg,'error');
+    toast(msg);
+  }finally{
+    setRegisterBusy(false);
+  }
 }
 
 function bind(){
@@ -960,7 +1017,7 @@ function bind(){
     const summary=e.target.closest('[data-summary]');if(summary){openSummaryDetail(summary.dataset.summary);return}
   });
   document.addEventListener('keydown',e=>{if(!['Enter',' '].includes(e.key))return;if(e.target.matches('input,select,textarea,button,a'))return;const el=e.target.closest('[data-product-id],[data-cpcl-id],[data-house],[data-summary]');if(!el)return;e.preventDefault();if(el.dataset.productId)openProductDetail(el.dataset.productId);else if(el.dataset.cpclId)openCPCLDetail(el.dataset.cpclId);else if(el.dataset.house)openHouseDetail(el.dataset.house);else if(el.dataset.summary)openSummaryDetail(el.dataset.summary)});
-  $$('.auth-tabs .tab').forEach(b=>b.onclick=()=>switchAuthTab(b.dataset.authTab));$('#loginForm').onsubmit=e=>{e.preventDefault();login($('#loginEmail').value,$('#loginPassword').value)};$('#registerForm').onsubmit=e=>{e.preventDefault();registerBeneficiary(e.target)};
+  $$('.auth-tabs .tab').forEach(b=>b.onclick=()=>switchAuthTab(b.dataset.authTab));$('#loginForm').onsubmit=e=>{e.preventDefault();login($('#loginEmail').value,$('#loginPassword').value)};const rp=$('#regProvince');if(rp)rp.innerHTML='<option value="">Pilih Provinsi</option>'+provinceOptions();$('#registerForm').onsubmit=e=>{e.preventDefault();registerBeneficiary(e.target)};
   $('#productSearch').oninput=renderProducts;$('#provinceFilter').onchange=renderCPCL;$('#statusFilter').onchange=renderCPCL;$$('[data-scroll]').forEach(b=>b.onclick=()=>{closeAuth();document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:'smooth'})});$('#toggleSidebar').onclick=()=>$('.sidebar').classList.toggle('open');
   $('#warrantyCheckForm').onsubmit=e=>{e.preventDefault();const code=$('#warrantyCodeCheck').value.trim().toUpperCase(),db=getDB(),b=db.beneficiaries.find(x=>String(x.warrantyCode||'').toUpperCase()===code),out=$('#warrantyCheckResult');if(!b){out.innerHTML='<div class="result-card warn"><b>Kode tidak ditemukan</b><p>Periksa kembali kode atau hubungi admin proyek.</p></div>';return}const w=warrantyStatus(b);out.innerHTML=`<div class="result-card ${w.cls}"><b>${w.label}</b><p>${esc(b.name)} • ${esc(b.group)}<br>${esc(b.asset)} • ${esc(b.serial||'No. seri belum diisi')}<br>Mulai: ${fmtDate(b.warrantyStart)} ${w.end?`• Berakhir: ${w.end.toLocaleDateString('id-ID')}`:''}</p></div>`};
 }

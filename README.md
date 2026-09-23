@@ -143,3 +143,7 @@ Setup sekali:
 ## Tampilan Latar
 
 - Background pemandangan sawah sudah ditanamkan langsung ke coding (embedded data URI) untuk seluruh halaman.
+
+
+## Registrasi Penerima Online
+Form registrasi serah terima aktif menggunakan Firebase Authentication + Firestore. Penerima mengisi data, provinsi, nomor CPCL, dan membuat password sendiri. Setelah berhasil, akun user dan kode garansi tersimpan online dan dashboard penerima langsung terbuka.

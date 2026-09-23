@@ -154,3 +154,14 @@ footer{background:linear-gradient(90deg,rgba(6,55,31,.92),rgba(8,73,41,.90))!imp
 .house-photo,.house-admin-preview-img,.asset-photo,.claim-photo{box-shadow:0 10px 30px rgba(0,0,0,.08)}
 
 @media(max-width:620px){body::before{background-position:center top}.topbar{background:rgba(255,255,255,.90)!important}}
+
+
+/* Registrasi penerima online */
+.consent-row{display:flex!important;grid-template-columns:auto 1fr!important;align-items:flex-start;gap:10px!important;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.72)}
+.consent-row input{width:auto;margin-top:2px}
+.form-message{min-height:20px;padding:0;font-size:12px;font-weight:700;line-height:1.45}
+.form-message.working{padding:10px 12px;border-radius:11px;background:#eef6ff;color:#315c8b}
+.form-message.success{padding:10px 12px;border-radius:11px;background:#e9f7ed;color:#17683b}
+.form-message.error{padding:10px 12px;border-radius:11px;background:#fff0f0;color:#a33030}
+#registerSubmit:disabled{opacity:.65;cursor:wait}
+#registerForm select{width:100%;border:1px solid var(--line);background:white;border-radius:13px;padding:12px 14px;outline:none}
