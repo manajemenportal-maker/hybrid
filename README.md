@@ -139,3 +139,7 @@ Setup sekali:
 3. Users → **Add user**.
 4. Masukkan email admin di atas.
 5. Masukkan password admin yang sudah Anda tentukan.
+
+## Tampilan Latar
+
+- Background pemandangan sawah sudah ditanamkan langsung ke coding (embedded data URI) untuk seluruh halaman.
