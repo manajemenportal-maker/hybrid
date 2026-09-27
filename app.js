@@ -67,7 +67,7 @@ function startCloudSync(){
   cloudUnsubscribe=firebaseDb.collection('appData').doc('main').onSnapshot(snap=>{
     if(!snap.exists){
       cloudSnapshotLoaded=true;
-      setCloudStatus(firebaseAuth?.currentUser?'Siap sinkron':'Online publik','online');
+      setCloudStatus(firebaseAuth?.currentUser?'Online':'Terhubung','online');
       if(firebaseAuth?.currentUser)pushCloudNow(getDB());
       return;
     }
@@ -97,13 +97,13 @@ async function initFirebaseOnline(){
     try{firebaseDb.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}
     try{if(location.protocol!=='file:'&&firebase.analytics)firebase.analytics()}catch(e){}
     firebaseAuth.onAuthStateChanged(user=>{
-      setCloudStatus(user?'Online':'Online publik','online');
+      setCloudStatus(user?'Online':'Terhubung','online');
       if(user&&cloudSnapshotLoaded)pushCloudNow(getDB());
     });
     startCloudSync();
   }catch(err){
     console.warn('Firebase init gagal',err);
-    setCloudStatus('Mode lokal','error');
+    setCloudStatus('Koneksi terganggu','error');
   }
 }
 
@@ -128,11 +128,11 @@ const DEFAULT_HYBRID_CARD = {
   pumpLabel:'POMPA',
   pumpName:'HYBRID 6 INCHI',
   dieselLabel:'DIESEL',
-  dieselPower:'12 HP',
+  dieselPower:'15 HP',
   electricLabel:'MOTOR LISTRIK',
   electricPower:'7,5 kW',
   shaftSymbol:'⇄',
-  note:'*Konfigurasi contoh. Spesifikasi dapat diubah oleh admin sesuai paket proyek.',
+  note:'Diesel dan motor listrik digunakan secara bergantian sesuai kebutuhan operasi.',
   coreColor:'#146533',
   dieselColor:'#fff2d7',
   electricColor:'#e3efff',
@@ -191,7 +191,7 @@ const DEFAULT_HOUSE_CARDS = {
     detail3:'Udara masuk, pembuangan panas, dan gas buang harus diarahkan aman keluar bangunan.',
     detail4:'Sediakan ruang kerja, pencahayaan, guard komponen berputar, dan jalur keluar operator yang tidak terhalang.',
     detail5:'Lokasi dengan risiko kehilangan aset atau akses publik yang lebih tinggi.',
-    detail6:'Finalisasi bentuk dan ukuran setelah dimensi unit pompa hybrid 6 inchi, panel, pipa, dan pondasi dikunci.'
+    detail6:'Ukuran rumah pompa mengikuti dimensi unit, panel, pipa, pondasi, dan kebutuhan servis di lokasi.'
   }
 };
 function cloneHouseCards(src=DEFAULT_HOUSE_CARDS){
@@ -203,33 +203,26 @@ const seed = {
   settings:{
     siteName:'Listrik Masuk Sawah',
     heroTitle:'Pompa irigasi hybrid untuk sawah yang lebih tangguh.',
-    heroText:'Satu sistem, dua sumber penggerak: motor diesel dan motor listrik. Aplikasi ini juga mengelola CPCL, lokasi kelompok, rumah pompa, bantuan, garansi, serta layanan purna jual.',
+    heroText:'Satu pompa irigasi dengan dua pilihan sumber tenaga: diesel dan motor listrik yang bekerja bergantian. Dilengkapi layanan informasi penerima bantuan, lokasi kelompok tani, garansi, dan purna jual.',
     footerText:'Listrik untuk Sawah, Energi untuk Negeri.',
     heroBgImage:EMBEDDED_HERO_BG,
-    heroBgCredit:'Foto latar persawahan riil',
+    heroBgCredit:'Latar persawahan',
     hybridCard:{...DEFAULT_HYBRID_CARD},
     houseCards:cloneHouseCards()
   },
   products:[
-    {id:'P001',name:'Pompa Irigasi Hybrid 6"',icon:'⚙️',category:'Pompa Hybrid',spec:'Diameter 6 inchi • Diesel 12 HP + motor listrik 7,5 kW 3-phase',desc:'Satu unit pompa irigasi hybrid diameter 6 inchi dengan dua sumber penggerak yang dapat digunakan bergantian sesuai ketersediaan energi.',active:true,image:''},
+    {id:'P001',name:'Pompa Irigasi Hybrid 6"',icon:'⚙️',category:'Pompa Hybrid',spec:'Diameter 6 inchi • Diesel 15 HP + motor listrik 7,5 kW 3-phase',desc:'Satu unit pompa irigasi hybrid diameter 6 inchi dengan dua sumber penggerak yang dapat digunakan bergantian sesuai ketersediaan energi.',active:true,image:''},
     {id:'P002',name:'Panel Motor 3 Phase',icon:'⚡',category:'Kelistrikan',spec:'Proteksi motor, MCB/MCCB, kontaktor & overload',desc:'Panel kendali motor untuk operasi aman, rapi dan mudah dipelihara.',active:true,image:''},
     {id:'P003',name:'Rumah Pompa Modular',icon:'🏠',category:'Infrastruktur',spec:'Ventilasi + area panel + ruang servis',desc:'Struktur rumah pompa yang disesuaikan dengan pompa hybrid dan kondisi lapangan.',active:true,image:''},
     {id:'P004',name:'Pipa & Aksesori Irigasi',icon:'🔩',category:'Aksesori',spec:'Suction, discharge, valve dan flexible coupling',desc:'Paket aksesori pemasangan agar aliran air dan perawatan sistem lebih praktis.',active:true,image:''},
     {id:'P005',name:'Sistem Proteksi & Guard',icon:'🛡️',category:'Keselamatan',spec:'Pelindung kopling, pulley dan komponen berputar',desc:'Perlengkapan keselamatan operator untuk unit pompa hybrid.',active:true,image:''},
     {id:'P006',name:'Paket Servis & Garansi',icon:'🧰',category:'Purna Jual',spec:'Registrasi unit, inspeksi, klaim dan riwayat servis',desc:'Setiap penerima mendapatkan kode unik sebagai identitas unit dan garansi.',active:true,image:''}
   ],
-  beneficiaries:[
-    {id:'CPCL-2026-001',name:'Budi Santoso',group:'Poktan Makmur Jaya',phone:'0812-1111-2233',email:'penerima@listrikmasuksawah.id',province:'Banten',village:'Desa Mekar Sari',lat:-6.25,lng:106.62,status:'Aktif',asset:'Pompa Hybrid 6 inchi',serial:'KSA-HYB-260001',warrantyCode:'LMS-BTN-260001',warrantyStart:'2026-09-01',warrantyMonths:12,userId:'U002',photo:''},
-    {id:'CPCL-2026-002',name:'Siti Aminah',group:'Poktan Tani Sejahtera',phone:'0813-2222-3344',email:'siti@example.id',province:'Jawa Barat',village:'Kec. Sukamaju',lat:-6.62,lng:107.44,status:'Siap Serah Terima',asset:'Pompa Hybrid 6 inchi',serial:'KSA-HYB-260002',warrantyCode:'LMS-JBR-260002',warrantyStart:'',warrantyMonths:12,userId:'',photo:''},
-    {id:'CPCL-2026-003',name:'Rahmat',group:'Gapoktan Sumber Air',phone:'0812-8888-9900',email:'rahmat@example.id',province:'Jawa Tengah',village:'Desa Sumber Rejeki',lat:-7.15,lng:110.15,status:'Verifikasi',asset:'Pompa Hybrid 6 inchi',serial:'',warrantyCode:'',warrantyStart:'',warrantyMonths:12,userId:'',photo:''}
-  ],
+  beneficiaries:[],
   users:[
-    {id:'U001',name:'Administrator',email:ADMIN_EMAIL,password:'',role:'admin',status:'aktif'},
-    {id:'U002',name:'Budi Santoso',email:'penerima@listrikmasuksawah.id',password:'user123',role:'user',status:'aktif',beneficiaryId:'CPCL-2026-001'}
+    {id:'U001',name:'Administrator',email:ADMIN_EMAIL,password:'',role:'admin',status:'aktif'}
   ],
-  claims:[
-    {id:'CLM-001',beneficiaryId:'CPCL-2026-001',date:'2026-09-15',type:'Pemeriksaan motor listrik',note:'Motor tidak start, cek sumber 3-phase dan overload.',status:'Diproses',adminNote:'Teknisi dijadwalkan melakukan pemeriksaan.',photo:''}
-  ],
+  claims:[],
   audit:[]
 };
 
@@ -267,11 +260,15 @@ function normalizeDB(db){
   out.beneficiaries.forEach(b=>{if(b.email==='penerima@demo.id')b.email='penerima@listrikmasuksawah.id';});
   out.users.forEach(u=>{if(u.email==='penerima@demo.id')u.email='penerima@listrikmasuksawah.id';});
   out.users=out.users.map(u=>{const seedUser=seed.users.find(s=>s.email===u.email);return {...u,password:u.role==='admin'?'':(u.password||seedUser?.password||'')}});
+  // Keep existing administrator content; refresh only unchanged legacy template copy.
+  if(out.settings.heroText==='Satu sistem, dua sumber penggerak: motor diesel dan motor listrik. Aplikasi ini juga mengelola CPCL, lokasi kelompok, rumah pompa, bantuan, garansi, serta layanan purna jual.') out.settings.heroText='Satu pompa irigasi dengan dua pilihan sumber tenaga: diesel dan motor listrik yang bekerja bergantian. Dilengkapi layanan informasi penerima bantuan, lokasi kelompok tani, garansi, dan purna jual.';
+  if(out.settings.hybridCard.note==='*Konfigurasi contoh. Spesifikasi dapat diubah oleh admin sesuai paket proyek.') out.settings.hybridCard.note='Diesel dan motor listrik digunakan secara bergantian sesuai kebutuhan operasi.';
+  if(out.settings.hybridCard.dieselPower==='12 HP' && out.settings.hybridCard.pumpName==='HYBRID 6 INCHI') out.settings.hybridCard.dieselPower='15 HP';
   if(!out.settings.footerText || out.settings.footerText==='Sistem informasi bantuan pompa irigasi hybrid.' || out.settings.footerText==='Mengalirkan Energi ke Sawah, Menguatkan Petani, Menumbuhkan Panen Negeri.') out.settings.footerText='Listrik untuk Sawah, Energi untuk Negeri.';
   out.products = out.products.map(p=>({image:'',active:true,...p})).map(p=>{
     if(p.name==='Pompa Irigasi Hybrid 4"') p.name='Pompa Irigasi Hybrid 6"';
     if(typeof p.spec==='string'){
-      if(p.spec==='Diesel 12 HP + motor listrik 7,5 kW 3-phase') p.spec='Diameter 6 inchi • Diesel 12 HP + motor listrik 7,5 kW 3-phase';
+      if(p.spec==='Diesel 12 HP + motor listrik 7,5 kW 3-phase' || p.spec==='Diameter 6 inchi • Diesel 12 HP + motor listrik 7,5 kW 3-phase') p.spec='Diameter 6 inchi • Diesel 15 HP + motor listrik 7,5 kW 3-phase';
       p.spec=p.spec.replace(/\b4\s*(inchi|inch|")/gi,'6 inchi');
     }
     if(typeof p.desc==='string') p.desc=p.desc.replace(/pompa irigasi hybrid diameter 4 inchi/gi,'pompa irigasi hybrid diameter 6 inchi');
@@ -468,7 +465,7 @@ function openProductDetail(id){
   if(p.id==='P001' || /pompa.*hybrid/i.test(p.name)) items=[
     ['Ukuran pompa','6 inchi — ukuran utama unit program saat ini.'],
     ['Sistem penggerak','Hybrid: mesin diesel dan motor listrik digunakan bergantian sesuai kondisi sumber energi.'],
-    ['Konfigurasi saat ini','Diesel 12 HP + motor listrik 7,5 kW 3-phase. Nilai ini adalah konfigurasi aplikasi dan dapat diubah admin sesuai paket final.'],
+    ['Spesifikasi penggerak',p.spec],
     ['Fungsi','Pemompaan air irigasi untuk mendukung distribusi air ke area persawahan.'],
     ['Keselamatan','Komponen berputar harus diberi guard. Perpindahan penggerak harus memastikan sumber yang tidak digunakan tidak menimbulkan putaran/risiko yang tidak diinginkan.'],
     ['Perawatan','Pemeriksaan berkala pada pompa, alignment/coupling, bearing, seal, motor, diesel, panel, dan sambungan pipa.']
@@ -515,7 +512,7 @@ function openProductDetail(id){
   ];
   else items=[['Kategori',p.category],['Spesifikasi',p.spec],['Deskripsi',p.desc],['Status','Produk aktif dalam katalog program.']];
   const image=p.image?`<img class="detail-image" src="${safeUrl(p.image)}" alt="${esc(p.name)}">`:'';
-  openDetail(p.category,p.name,p.desc,`${image}<div class="detail-meta"><div><small>Kategori</small><b>${esc(p.category)}</b></div><div><small>Status</small><b>${p.active?'Tampil':'Disembunyikan'}</b></div><div><small>ID Produk</small><b>${esc(p.id)}</b></div></div>${detailBoxes(items)}<div class="detail-note">Spesifikasi teknis final mengikuti unit yang disetujui dalam dokumen proyek dan data yang dimasukkan admin.</div>`);
+  openDetail(p.category,p.name,p.desc,`${image}<div class="detail-meta"><div><small>Kategori</small><b>${esc(p.category)}</b></div><div><small>Status</small><b>${p.active?'Tampil':'Disembunyikan'}</b></div><div><small>ID Produk</small><b>${esc(p.id)}</b></div></div>${detailBoxes(items)}<div class="detail-note">Rincian teknis mengacu pada spesifikasi unit dan dokumen serah terima.</div>`);
 }
 function openCPCLDetail(id){
   const b=getDB().beneficiaries.find(x=>x.id===id); if(!b)return; const w=warrantyStatus(b);
@@ -567,7 +564,7 @@ async function login(email,password){
 
   // Production admin must authenticate through Firebase Authentication.
   if(mail===ADMIN_EMAIL){
-    if(!firebaseAuth) return toast('Firebase Authentication belum siap. Periksa koneksi internet.');
+    if(!firebaseAuth) return toast('Layanan masuk tidak tersambung. Periksa koneksi internet.');
     try{
       const cred=await firebaseAuth.signInWithEmailAndPassword(mail,password);
       if(!u){
@@ -583,14 +580,14 @@ async function login(email,password){
       saveDB(db);
       await pushCloudNow(db);
       sessionStorage.setItem(SESSION,u.id);
-      audit('LOGIN','Admin masuk melalui Firebase Authentication');
+      audit('LOGIN','Admin masuk');
       showDashboard();
       return;
     }catch(err){
       console.warn('Admin Firebase login gagal',err);
       return toast(err.code==='auth/operation-not-allowed'
-        ? 'Aktifkan Email/Password di Firebase Authentication.'
-        : 'Login admin gagal. Periksa akun Firebase Authentication dan password.');
+        ? 'Layanan masuk belum tersedia. Silakan hubungi pengelola.'
+        : 'Login gagal. Periksa email dan kata sandi Anda.');
     }
   }
 
@@ -607,19 +604,19 @@ async function login(email,password){
       saveDB(db);
       await pushCloudNow(db);
       sessionStorage.setItem(SESSION,u.id);
-      audit('LOGIN','Masuk dashboard Firebase');
+      audit('LOGIN','Masuk dashboard');
       showDashboard();
       return;
     }catch(err){
       console.warn('Firebase login gagal',err);
       return toast(err.code==='auth/operation-not-allowed'
-        ? 'Aktifkan Email/Password di Firebase Authentication.'
-        : 'Login gagal. Periksa email dan password.');
+        ? 'Layanan masuk belum tersedia. Silakan hubungi pengelola.'
+        : 'Login gagal. Periksa email dan kata sandi Anda.');
     }
   }
 
   // No local fallback for production credentials.
-  return toast('Firebase Authentication belum tersedia. Periksa koneksi internet.');
+  return toast('Layanan masuk sedang tidak tersedia. Silakan coba lagi.');
 }
 
 function showDashboard(){
@@ -652,7 +649,7 @@ function adminPage(page){
     const c=hybridCardSettings(db), imageHttp=/^https?:\/\//i.test(c.image||'')?c.image:'';
     return `<div class="grid-2 hybrid-admin-layout">
       <div class="panel"><div class="panel-title-row"><h3>Atur Kartu Pompa Hybrid</h3><span class="detail-badge">Halaman Depan</span></div>
-        <p class="muted">Perubahan di sini langsung mengendalikan kartu besar Pompa Hybrid pada halaman depan.</p>
+        <p class="muted">Atur informasi dan tampilan kartu Pompa Hybrid pada halaman utama.</p>
         <form id="hybridCardForm" class="dash-form">
           <div class="switch-row"><label><input type="checkbox" name="visible" ${c.visible?'checked':''}> Tampilkan kartu di halaman depan</label><label><input type="checkbox" name="useImage" ${c.useImage?'checked':''}> Gunakan gambar/foto sebagai visual utama</label></div>
           <div class="grid-2 compact-grid"><label>Label Utama<input name="pumpLabel" value="${esc(c.pumpLabel)}" required></label><label>Nama Pompa<input name="pumpName" value="${esc(c.pumpName)}" required></label></div>
@@ -661,7 +658,7 @@ function adminPage(page){
           <div class="grid-2 compact-grid"><label>Simbol Penghubung<input name="shaftSymbol" value="${esc(c.shaftSymbol)}" maxlength="4"></label><label>Catatan Kartu<input name="note" value="${esc(c.note)}"></label></div>
           <div class="grid-2 compact-grid"><label>Warna Blok Pompa<input type="color" name="coreColor" value="${safeColor(c.coreColor,DEFAULT_HYBRID_CARD.coreColor)}"></label><label>Warna Blok Diesel<input type="color" name="dieselColor" value="${safeColor(c.dieselColor,DEFAULT_HYBRID_CARD.dieselColor)}"></label></div>
           <div class="grid-2 compact-grid"><label>Warna Blok Motor<input type="color" name="electricColor" value="${safeColor(c.electricColor,DEFAULT_HYBRID_CARD.electricColor)}"></label><label>URL Gambar<input name="image" value="${esc(imageHttp)}" placeholder="https://..."></label></div>
-          <label>Upload Gambar Lokal (opsional, maks. 900 KB)<input name="imageFile" type="file" accept="image/*"></label>
+          <label>Unggah Foto (maks. 900 KB)<input name="imageFile" type="file" accept="image/*"></label>
           ${c.image?`<div class="current-hybrid-image"><span>Gambar saat ini tersedia.</span><button type="button" class="danger" id="removeHybridImage">Hapus Gambar</button></div>`:''}
           <hr class="soft"><h3>Detail Saat Kartu Diklik</h3>
           <label>Judul Detail<input name="detailTitle" value="${esc(c.detailTitle)}"></label><label>Subjudul Detail<input name="detailSubtitle" value="${esc(c.detailSubtitle)}"></label>
@@ -669,10 +666,10 @@ function adminPage(page){
           <label>Mode Diesel<textarea name="detailDiesel" rows="2">${esc(c.detailDiesel)}</textarea></label><label>Mode Listrik<textarea name="detailElectric" rows="2">${esc(c.detailElectric)}</textarea></label>
           <label>Perpindahan Penggerak<textarea name="detailTransfer" rows="2">${esc(c.detailTransfer)}</textarea></label><label>Keselamatan<textarea name="detailSafety" rows="2">${esc(c.detailSafety)}</textarea></label>
           <label>Perawatan<textarea name="detailMaintenance" rows="2">${esc(c.detailMaintenance)}</textarea></label>
-          <div class="hybrid-save-bar"><div id="hybridSaveStatus" class="save-status" role="status" aria-live="polite"></div><div class="inline-actions"><button type="submit" class="primary" id="saveHybridCardBtn">Simpan Perubahan Online</button><button type="button" class="ghost" id="resetHybridCard">Kembalikan Default</button><button type="button" class="ghost" id="previewHybridDetail">Lihat Detail Klik</button></div></div>
+          <div class="hybrid-save-bar"><div id="hybridSaveStatus" class="save-status" role="status" aria-live="polite"></div><div class="inline-actions"><button type="submit" class="primary" id="saveHybridCardBtn">Simpan Perubahan Online</button><button type="button" class="ghost" id="resetHybridCard">Pulihkan Tampilan Awal</button><button type="button" class="ghost" id="previewHybridDetail">Lihat Detail Kartu</button></div></div>
         </form>
       </div>
-      <div class="panel hybrid-preview-panel"><div class="panel-title-row"><h3>Preview Kartu</h3><span class="muted">Preview langsung</span></div><div id="hybridAdminPreview" class="hybrid-preview-wrap"><div class="hero-card">${hybridVisualMarkup(c)}<p class="muted">${esc(c.note)}</p></div></div></div>
+      <div class="panel hybrid-preview-panel"><div class="panel-title-row"><h3>Tampilan Kartu</h3><span class="muted">Tampilan langsung</span></div><div id="hybridAdminPreview" class="hybrid-preview-wrap"><div class="hero-card">${hybridVisualMarkup(c)}<p class="muted">${esc(c.note)}</p></div></div></div>
     </div>`;
   }
 
@@ -704,11 +701,11 @@ function adminPage(page){
           <label>Detail 4<textarea name="detail4" rows="2">${esc(c.detail4)}</textarea></label>
           <label>Detail 5<textarea name="detail5" rows="2">${esc(c.detail5)}</textarea></label>
           <label>Detail 6<textarea name="detail6" rows="2">${esc(c.detail6)}</textarea></label>
-          <div class="inline-actions"><button class="primary">Simpan ${esc(labels[type])}</button><button type="button" class="ghost previewHouseDetail" data-house-type="${type}">Preview Detail</button><button type="button" class="ghost resetHouseCard" data-house-type="${type}">Reset Default</button></div>
+          <div class="inline-actions"><button class="primary">Simpan ${esc(labels[type])}</button><button type="button" class="ghost previewHouseDetail" data-house-type="${type}">Lihat Detail</button><button type="button" class="ghost resetHouseCard" data-house-type="${type}">Pulihkan Tampilan Awal</button></div>
         </form>
       </div>`;
     }).join('');
-    return `<div class="panel house-admin-intro"><div><span class="eyebrow">KONTROL HALAMAN DEPAN</span><h3>Editor Referensi Rumah Pompa Hybrid</h3><p class="muted">Admin dapat mengubah tiga kartu referensi rumah pompa, mengupload gambar sendiri, serta mengatur isi detail yang muncul ketika kartu diklik.</p></div></div><div class="house-admin-grid">${cards}</div>`;
+    return `<div class="panel house-admin-intro"><div><span class="eyebrow">KONTROL HALAMAN DEPAN</span><h3>Editor Referensi Rumah Pompa Hybrid</h3><p class="muted">Kelola foto, informasi, dan detail tiga pilihan rumah pompa yang ditampilkan di halaman utama.</p></div></div><div class="house-admin-grid">${cards}</div>`;
   }
 
   if(page==='beneficiaries'){
@@ -725,7 +722,7 @@ function adminPage(page){
   if(page==='products'){
     return `<div class="panel"><div class="panel-title-row"><h3 id="productFormTitle">Tambah Produk</h3><button type="button" class="ghost" id="cancelEditProduct" hidden>Batal Edit</button></div>
       <form id="productForm" class="dash-form grid-2"><input type="hidden" name="editId"><label>Nama<input name="name" required></label><label>Kategori<input name="category" required></label>
-        <label>Ikon / Emoji<input name="icon" value="⚙️"></label><label>Spesifikasi<input name="spec" required></label><label>URL Gambar<input name="image" placeholder="https://..."></label><label>Upload Gambar Lokal<input name="imageFile" type="file" accept="image/*"></label>
+        <label>Ikon / Emoji<input name="icon" value="⚙️"></label><label>Spesifikasi<input name="spec" required></label><label>URL Gambar<input name="image" placeholder="https://..."></label><label>Unggah Foto<input name="imageFile" type="file" accept="image/*"></label>
         <label style="grid-column:1/-1">Deskripsi<textarea name="desc" rows="3" required></textarea></label><div><button class="primary" id="saveProductBtn">Simpan Produk</button></div></form></div>
       <div class="panel"><h3>Katalog</h3><div class="table-wrap"><table class="data-table"><thead><tr><th>Produk</th><th>Kategori</th><th>Spesifikasi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${db.products.map(p=>`<tr><td>${p.image?`<img class="tiny-thumb" src="${safeUrl(p.image)}" alt="">`:esc(p.icon)} <b>${esc(p.name)}</b></td><td>${esc(p.category)}</td><td>${esc(p.spec)}</td><td>${p.active?'Tampil':'Disembunyikan'}</td><td><button class="small-btn" data-edit-product="${p.id}">Edit</button> <button class="small-btn" data-toggle-product="${p.id}">${p.active?'Sembunyikan':'Tampilkan'}</button> <button class="small-btn red" data-del-product="${p.id}">Hapus</button></td></tr>`).join('')}</tbody></table></div></div>`;
   }
@@ -735,7 +732,7 @@ function adminPage(page){
       <div class="panel"><div class="panel-title-row"><h3>Klaim & Servis</h3><button class="ghost" id="exportClaims">Export CSV</button></div>${claimsAdminTable(db.claims,db)}</div>`;
   }
   if(page==='users'){
-    return `<div class="panel"><h3>Buat User</h3><form id="addUser" class="dash-form grid-2"><label>Nama<input name="name" required></label><label>Email<input type="email" name="email" required></label><label>Password Awal<input name="password" value="user123" required></label><label>Hubungkan CPCL<select name="beneficiaryId"><option value="">—</option>${db.beneficiaries.map(b=>`<option value="${b.id}">${esc(b.id)} — ${esc(b.name)}</option>`).join('')}</select></label><div><button class="primary">Buat User</button></div></form></div>
+    return `<div class="panel"><h3>Buat User</h3><form id="addUser" class="dash-form grid-2"><label>Nama<input name="name" required></label><label>Email<input type="email" name="email" required></label><label>Password Awal<input type="password" name="password" minlength="6" autocomplete="new-password" required></label><label>Hubungkan CPCL<select name="beneficiaryId"><option value="">—</option>${db.beneficiaries.map(b=>`<option value="${b.id}">${esc(b.id)} — ${esc(b.name)}</option>`).join('')}</select></label><div><button class="primary">Buat User</button></div></form></div>
       <div class="panel"><h3>Daftar User</h3><div class="table-wrap"><table class="data-table"><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>CPCL</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${db.users.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.email)}</td><td>${esc(x.role)}</td><td>${esc(x.beneficiaryId||'-')}</td><td>${esc(x.status)}</td><td>${x.role==='admin'?'—':`<button class="small-btn" data-toggle-user="${x.id}">${x.status==='aktif'?'Nonaktifkan':'Aktifkan'}</button> <button class="small-btn" data-reset-user="${x.id}">Kirim Reset Password</button> <button class="small-btn red" data-del-user="${x.id}">Hapus</button>`}</td></tr>`).join('')}</tbody></table></div></div>`;
   }
   if(page==='settings'){
@@ -797,7 +794,7 @@ function setHybridSaveStatus(message='',state=''){
 function setHybridSaveBusy(busy){
   const btn=$('#saveHybridCardBtn'); if(!btn)return;
   btn.disabled=busy;
-  btn.textContent=busy?'Menyimpan ke Firebase...':'Simpan Perubahan Online';
+  btn.textContent=busy?'Menyimpan perubahan...':'Simpan Perubahan Online';
 }
 
 function bindDashActions(page,u){
@@ -812,12 +809,12 @@ function bindDashActions(page,u){
         e.preventDefault();
         setHybridSaveStatus('');
         if(!firebaseAuth?.currentUser){
-          setHybridSaveStatus('Sesi Firebase tidak aktif. Silakan keluar lalu login kembali.','error');
-          return toast('Sesi Firebase tidak aktif');
+          setHybridSaveStatus('Sesi masuk berakhir. Silakan masuk kembali.','error');
+          return toast('Sesi masuk berakhir');
         }
         if(!firebaseDb||!cloudReady){
-          setHybridSaveStatus('Koneksi Firestore belum siap. Periksa internet lalu coba lagi.','error');
-          return toast('Firestore belum siap');
+          setHybridSaveStatus('Layanan penyimpanan tidak tersambung. Periksa koneksi lalu coba lagi.','error');
+          return toast('Layanan penyimpanan belum tersedia');
         }
 
         const original=getDB();
@@ -830,21 +827,21 @@ function bindDashActions(page,u){
 
         try{
           if(file){
-            setHybridSaveStatus('Mengupload gambar ke Firebase Storage...','working');
+            setHybridSaveStatus('Mengunggah foto...','working');
             c.image=await fileToDataURL(file);
           }
 
           db.settings.hybridCard=c;
           auditLater(db,'UBAH_KARTU_HYBRID',`${c.pumpLabel} ${c.pumpName}`);
 
-          setHybridSaveStatus('Menyimpan pengaturan ke Firestore...','working');
+          setHybridSaveStatus('Menyimpan perubahan...','working');
           const synced=await pushCloudNow(db);
           if(!synced) throw new Error('cloud-save-failed');
 
           // Only commit the browser cache after Firestore accepts the change.
           localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));
-          setHybridSaveStatus('Tersimpan online di Firebase.','success');
-          toast('Kartu Pompa Hybrid tersimpan online');
+          setHybridSaveStatus('Perubahan berhasil disimpan.','success');
+          toast('Kartu Pompa Hybrid berhasil diperbarui');
 
           renderPublic();
           // Re-open the page after a short moment so the success state is visible.
@@ -853,18 +850,18 @@ function bindDashActions(page,u){
           console.warn('Simpan kartu hybrid gagal',err);
           localStorage.setItem(DBKEY,JSON.stringify(original));
           let msg='Perubahan belum tersimpan.';
-          if(err?.code==='storage/unauthorized') msg='Upload gambar ditolak Firebase Storage Rules.';
-          else if(err?.code==='storage/retry-limit-exceeded') msg='Upload gambar gagal karena koneksi. Coba lagi.';
+          if(err?.code==='storage/unauthorized') msg='Akses unggah foto ditolak. Hubungi pengelola sistem.';
+          else if(err?.code==='storage/retry-limit-exceeded') msg='Unggah foto gagal karena koneksi. Coba lagi.';
           else if(err?.code==='storage/invalid-format') msg='Format file gambar tidak didukung.';
-          else if(err?.message==='cloud-save-failed') msg='Firestore menolak/ gagal menyimpan perubahan. Periksa Firestore Rules dan koneksi.';
+          else if(err?.message==='cloud-save-failed') msg='Perubahan belum dapat disimpan. Periksa koneksi atau hubungi pengelola sistem.';
           setHybridSaveStatus(msg,'error');
           toast(msg);
         }finally{
           setHybridSaveBusy(false);
         }
       });
-      $('#resetHybridCard')?.addEventListener('click',async()=>{if(!confirm('Kembalikan kartu Pompa Hybrid ke pengaturan awal?'))return;if(!firebaseAuth?.currentUser)return toast('Sesi Firebase tidak aktif');const original=getDB(),db=clone(original);db.settings.hybridCard={...DEFAULT_HYBRID_CARD};auditLater(db,'RESET_KARTU_HYBRID','Default');setHybridSaveBusy(true);setHybridSaveStatus('Mengembalikan pengaturan default...','working');const ok=await pushCloudNow(db);if(ok){localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));setHybridSaveStatus('Default tersimpan online.','success');renderPublic();setTimeout(()=>navigateDash('hybridcard'),450)}else{localStorage.setItem(DBKEY,JSON.stringify(original));setHybridSaveStatus('Reset gagal disimpan ke Firestore.','error')}setHybridSaveBusy(false)});
-      $('#removeHybridImage')?.addEventListener('click',async()=>{if(!firebaseAuth?.currentUser)return toast('Sesi Firebase tidak aktif');const original=getDB(),db=clone(original);db.settings.hybridCard={...hybridCardSettings(db),image:'',useImage:false};auditLater(db,'HAPUS_GAMBAR_KARTU_HYBRID','');setHybridSaveBusy(true);setHybridSaveStatus('Menghapus gambar dari kartu...','working');const ok=await pushCloudNow(db);if(ok){localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));setHybridSaveStatus('Perubahan tersimpan online.','success');renderPublic();setTimeout(()=>navigateDash('hybridcard'),450)}else{localStorage.setItem(DBKEY,JSON.stringify(original));setHybridSaveStatus('Perubahan gagal disimpan ke Firestore.','error')}setHybridSaveBusy(false)});
+      $('#resetHybridCard')?.addEventListener('click',async()=>{if(!confirm('Kembalikan kartu Pompa Hybrid ke pengaturan awal?'))return;if(!firebaseAuth?.currentUser)return toast('Sesi masuk berakhir');const original=getDB(),db=clone(original);db.settings.hybridCard={...DEFAULT_HYBRID_CARD};auditLater(db,'RESET_KARTU_HYBRID','Default');setHybridSaveBusy(true);setHybridSaveStatus('Mengembalikan pengaturan default...','working');const ok=await pushCloudNow(db);if(ok){localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));setHybridSaveStatus('Pengaturan awal berhasil dipulihkan.','success');renderPublic();setTimeout(()=>navigateDash('hybridcard'),450)}else{localStorage.setItem(DBKEY,JSON.stringify(original));setHybridSaveStatus('Pengaturan awal belum dapat dipulihkan.','error')}setHybridSaveBusy(false)});
+      $('#removeHybridImage')?.addEventListener('click',async()=>{if(!firebaseAuth?.currentUser)return toast('Sesi masuk berakhir');const original=getDB(),db=clone(original);db.settings.hybridCard={...hybridCardSettings(db),image:'',useImage:false};auditLater(db,'HAPUS_GAMBAR_KARTU_HYBRID','');setHybridSaveBusy(true);setHybridSaveStatus('Menghapus gambar dari kartu...','working');const ok=await pushCloudNow(db);if(ok){localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));setHybridSaveStatus('Perubahan tersimpan online.','success');renderPublic();setTimeout(()=>navigateDash('hybridcard'),450)}else{localStorage.setItem(DBKEY,JSON.stringify(original));setHybridSaveStatus('Perubahan belum dapat disimpan.','error')}setHybridSaveBusy(false)});
       $('#previewHybridDetail')?.addEventListener('click',()=>{const c=readHybridForm();openDetail('SISTEM POMPA HYBRID',c.detailTitle,c.detailSubtitle,hybridDetailMarkup(c))});
     }
 
@@ -952,7 +949,7 @@ function bindDashActions(page,u){
 
     $('#addUser')?.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),db=getDB(),email=f.get('email').trim().toLowerCase(),password=String(f.get('password')||'');if(db.users.some(x=>x.email.toLowerCase()===email))return toast('Email sudah dipakai');if(password.length<6)return toast('Password minimal 6 karakter');const beneficiaryId=f.get('beneficiaryId');if(beneficiaryId&&db.users.some(x=>x.beneficiaryId===beneficiaryId))return toast('CPCL sudah terhubung ke user lain');let authUid='';if(firebaseAuth){let secondary=null;try{secondary=firebase.initializeApp(FIREBASE_CONFIG,'secondary-'+Date.now());const cred=await secondary.auth().createUserWithEmailAndPassword(email,password);authUid=cred.user.uid;await secondary.auth().signOut()}catch(err){if(secondary)secondary.delete().catch(()=>{});return toast(err.code==='auth/email-already-in-use'?'Email sudah ada di Firebase Authentication':'Gagal membuat akun Firebase')}if(secondary)secondary.delete().catch(()=>{})}const id=uid('U');db.users.push({id,uid:authUid,name:f.get('name').trim(),email,password:firebaseAuth?'':password,role:'user',status:'aktif',beneficiaryId});const b=db.beneficiaries.find(x=>x.id===beneficiaryId);if(b)b.userId=id;auditLater(db,'BUAT_USER',email);saveDB(db);await pushCloudNow(db);navigateDash('users');toast('User online dibuat')});
     $$('[data-toggle-user]').forEach(btn=>btn.onclick=()=>{const db=getDB(),x=db.users.find(z=>z.id===btn.dataset.toggleUser);x.status=x.status==='aktif'?'nonaktif':'aktif';auditLater(db,'UBAH_STATUS_USER',`${x.email} ${x.status}`);saveDB(db);navigateDash('users')});
-    $$('[data-reset-user]').forEach(btn=>btn.onclick=async()=>{const db=getDB(),x=db.users.find(z=>z.id===btn.dataset.resetUser);if(!x)return;if(firebaseAuth){try{await firebaseAuth.sendPasswordResetEmail(x.email);auditLater(db,'KIRIM_RESET_PASSWORD',x.email);saveDB(db);toast('Email reset password dikirim')}catch(err){toast('Gagal mengirim email reset password')}}else{const np=prompt(`Password baru untuk ${x.email}:`,'user123');if(!np)return;if(np.length<6)return toast('Minimal 6 karakter');x.password=np;auditLater(db,'RESET_PASSWORD',x.email);saveDB(db);toast('Password diperbarui')}});
+    $$('[data-reset-user]').forEach(btn=>btn.onclick=async()=>{const db=getDB(),x=db.users.find(z=>z.id===btn.dataset.resetUser);if(!x)return;if(firebaseAuth){try{await firebaseAuth.sendPasswordResetEmail(x.email);auditLater(db,'KIRIM_RESET_PASSWORD',x.email);saveDB(db);toast('Email reset password dikirim')}catch(err){toast('Gagal mengirim email reset password')}}else{const np=prompt(`Password baru untuk ${x.email}:`);if(!np)return;if(np.length<6)return toast('Minimal 6 karakter');x.password=np;auditLater(db,'RESET_PASSWORD',x.email);saveDB(db);toast('Password diperbarui')}});
     $$('[data-del-user]').forEach(btn=>btn.onclick=()=>{if(!confirm('Hapus user ini?'))return;const db=getDB(),x=db.users.find(z=>z.id===btn.dataset.delUser);if(x?.beneficiaryId){const b=db.beneficiaries.find(z=>z.id===x.beneficiaryId);if(b)b.userId=''}db.users=db.users.filter(z=>z.id!==btn.dataset.delUser);auditLater(db,'HAPUS_USER',x?.email||btn.dataset.delUser);saveDB(db);navigateDash('users')});
 
     $('#settingsForm')?.addEventListener('submit',async e=>{e.preventDefault();const form=e.target;const f=new FormData(form),db=getDB();['siteName','heroTitle','heroText','footerText'].forEach(k=>db.settings[k]=f.get(k));let heroBgImage=(f.get('heroBgImage')||'').trim();const heroFile=form.elements.heroBgFile?.files?.[0];try{if(heroFile)heroBgImage=await fileToDataURL(heroFile)}catch(err){return toast(err.message)}if(!heroBgImage)heroBgImage=db.settings.heroBgImage||EMBEDDED_HERO_BG;db.settings.heroBgImage=heroBgImage;auditLater(db,'UBAH_WEBSITE','Pengaturan tampilan & foto latar');saveDB(db);renderPublic();navigateDash('settings');toast('Pengaturan disimpan')});
@@ -987,8 +984,8 @@ function setRegisterBusy(busy){
 async function registerBeneficiary(form){
   setRegisterMessage('');
   if(!firebaseAuth||!firebaseDb){
-    setRegisterMessage('Koneksi Firebase belum siap. Periksa internet lalu coba lagi.','error');
-    return toast('Firebase belum siap');
+    setRegisterMessage('Layanan registrasi sedang tidak tersedia. Periksa koneksi lalu coba lagi.','error');
+    return toast('Koneksi layanan belum tersedia');
   }
 
   const f=new FormData(form);
@@ -1009,7 +1006,7 @@ async function registerBeneficiary(form){
   if(password!==passwordConfirm){setRegisterMessage('Konfirmasi password tidak sama.','error');return}
   if(!f.get('consent')){setRegisterMessage('Centang pernyataan kebenaran data.','error');return}
   if(!/^CPCL-[A-Z0-9-]+$/i.test(cpcl)){
-    setRegisterMessage('Format nomor CPCL belum sesuai. Contoh: CPCL-2026-001.','error'); return;
+    setRegisterMessage('Format nomor CPCL belum sesuai. Gunakan format CPCL-2026-001.','error'); return;
   }
 
   const originalDb=getDB();
@@ -1021,7 +1018,7 @@ async function registerBeneficiary(form){
   }
 
   setRegisterBusy(true);
-  setRegisterMessage('Membuat akun Firebase dan mengaktifkan garansi...','working');
+  setRegisterMessage('Memproses registrasi dan aktivasi garansi...','working');
 
   let cred=null;
   try{
@@ -1051,19 +1048,19 @@ async function registerBeneficiary(form){
     renderPublic();
     setRegisterMessage('Registrasi berhasil. Membuka dashboard penerima...','success');
     toast(`Registrasi berhasil • Kode garansi ${b.warrantyCode}`);
-    alert(`REGISTRASI BERHASIL\n\nNomor CPCL: ${b.id}\nKode Garansi: ${b.warrantyCode}\n\nAkun Anda sudah aktif dan tersimpan online.`);
+    alert(`REGISTRASI BERHASIL\n\nNomor CPCL: ${b.id}\nKode Garansi: ${b.warrantyCode}\n\nAkun Anda sudah aktif.`);
     showDashboard();
   }catch(err){
     console.warn('Registrasi Firebase gagal',err);
     localStorage.setItem(DBKEY,JSON.stringify(originalDb));
     if(cred?.user){try{await cred.user.delete()}catch(e){console.warn('Rollback auth gagal',e)}}
     let msg='Registrasi gagal. Silakan coba lagi.';
-    if(err?.code==='auth/email-already-in-use') msg='Email sudah terdaftar di Firebase. Gunakan menu Masuk atau email lain.';
+    if(err?.code==='auth/email-already-in-use') msg='Email sudah digunakan. Silakan masuk atau gunakan email lain.';
     else if(err?.code==='auth/invalid-email') msg='Format email tidak valid.';
     else if(err?.code==='auth/weak-password') msg='Password terlalu lemah. Gunakan minimal 6 karakter.';
-    else if(err?.code==='auth/operation-not-allowed') msg='Provider Email/Password belum diaktifkan di Firebase Authentication.';
-    else if(err?.code==='auth/network-request-failed') msg='Koneksi internet ke Firebase gagal. Coba lagi setelah koneksi stabil.';
-    else if(err?.message==='firestore-save-failed') msg='Akun belum disimpan karena Firestore menolak sinkronisasi. Periksa Firestore Rules.';
+    else if(err?.code==='auth/operation-not-allowed') msg='Layanan registrasi belum tersedia. Hubungi pengelola melalui WhatsApp.';
+    else if(err?.code==='auth/network-request-failed') msg='Koneksi terganggu. Periksa internet lalu coba lagi.';
+    else if(err?.message==='firestore-save-failed') msg='Registrasi belum dapat diselesaikan. Silakan coba lagi atau hubungi layanan informasi.';
     setRegisterMessage(msg,'error');
     toast(msg);
   }finally{
@@ -1089,6 +1086,6 @@ function bind(){
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('#installBtn').hidden=false});
 $('#installBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('#installBtn').hidden=true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=27',{updateViaCache:'none'}).catch(()=>{}));
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#detailView').hidden)closeDetail();else if(!$('#authView').hidden)closeAuth()}});
 bind();renderPublic();initFirebaseOnline();if(currentUser())showDashboard();

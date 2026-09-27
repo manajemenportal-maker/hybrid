@@ -186,30 +186,37 @@ footer{background:linear-gradient(90deg,rgba(6,55,31,.92),rgba(8,73,41,.90))!imp
 .flyer-pdf-tag{display:inline-block;margin-left:3px;border:1px solid rgba(255,255,255,.64);border-radius:5px;padding:3px 4px;font-size:9px;vertical-align:middle}
 @media(max-width:620px){.topbar{gap:7px}.brand{min-width:0}.brand>div{min-width:0}.brand strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brand-mark{flex-shrink:0;width:36px;height:36px}.header-actions{gap:5px;flex-shrink:0}.flyer-download{width:42px;min-width:42px;padding:9px;border-radius:12px}.flyer-download-label{display:none}.flyer-download-icon{font-size:23px}}
 
-/* v21: menu flyer always visible in public pages and dashboards */
-.flyer-download-header {display:inline-flex!important;visibility:visible!important;flex:0 0 auto!important}
-.flyer-top-strip {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(18px,4vw);background:#f2f9f0;border-bottom:1px solid #d4e5d7;position:relative;z-index:25}
-.flyer-top-strip-copy {display:flex;gap:10px;align-items:center;min-width:0;color:#163e2a}
-.flyer-top-strip-copy strong {display:block;font-size:14px;font-weight:850;line-height:1.35}
-.flyer-top-strip-copy small {display:block;color:#557563;font-size:11px;margin-top:2px}
-.flyer-top-strip-icon {display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;background:#d9eddd;border-radius:10px;font-size:22px;color:#126c3c}
-.flyer-strip-button,.flyer-hero-link {display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#10643a;color:#fff;text-decoration:none;border:1px solid #095a30;border-radius:13px;font-weight:800;white-space:nowrap;min-height:42px;padding:10px 16px;font-size:13px}
-.flyer-strip-button:hover,.flyer-hero-link:hover {background:#094e2b}
-.flyer-strip-button:focus-visible,.flyer-hero-link:focus-visible {outline:3px solid #f4b740;outline-offset:3px}
-.flyer-hero-link {background:#fff;color:#0d673a;border-color:#bcd8c6}
-.flyer-hero-link:hover {background:#ecf6ee}
-@media(max-width:760px){
-  .flyer-top-strip{padding:9px 14px;gap:9px}
-  .flyer-top-strip-copy strong{font-size:12px}
-  .flyer-top-strip-copy small{font-size:10px}
-  .flyer-strip-button{font-size:12px;padding:8px 11px}
-  .flyer-download-header{min-width:38px;width:auto;padding:8px 10px}
-  .flyer-download-header .flyer-download-label{display:none}
+/* Footer identitas dan kontak WhatsApp */
+.site-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;padding:32px max(18px,4vw)}
+.footer-brand{line-height:1.65}
+.footer-contact{display:flex;flex-direction:column;align-items:flex-end;gap:10px;min-width:0}
+.footer-wa-link{display:inline-flex;align-items:center;justify-content:center;gap:10px;color:white!important;background:#128C43;border:1px solid rgba(255,255,255,.34);border-radius:999px;text-decoration:none;font-weight:650;padding:11px 16px;min-height:46px;transition:background .18s ease,transform .18s ease}
+.footer-wa-link span{color:white!important;font-size:13px}
+.footer-wa-link strong{white-space:nowrap}
+.footer-wa-link .wa-icon{flex:0 0 auto;color:white}
+.footer-wa-link:hover{background:#0e7638;transform:translateY(-1px)}
+.footer-wa-link:focus-visible,.wa-float:focus-visible{outline:3px solid #ffe28a;outline-offset:3px}
+.footer-copyright{color:#d6e9dc!important;font-size:12px;letter-spacing:.02em}
+.wa-float{position:fixed;right:18px;bottom:22px;z-index:45;display:inline-flex;align-items:center;gap:9px;padding:13px 16px;background:#25D366;color:#073c1f;text-decoration:none;border-radius:999px;box-shadow:0 9px 28px rgba(0,0,0,.23);border:1px solid rgba(255,255,255,.65);font-weight:800;font-size:12px;transition:transform .18s ease,background .18s ease}
+.wa-float .wa-icon{width:24px;height:24px;flex:0 0 auto}
+.wa-float:hover{background:#2feb76;transform:translateY(-2px)}
+@media(max-width:900px){.wa-float{bottom:calc(81px + env(safe-area-inset-bottom));right:12px}}
+@media(max-width:620px){.site-footer{align-items:flex-start;gap:18px}.footer-contact{align-items:flex-start;width:100%}.footer-wa-link{width:100%;justify-content:flex-start}.wa-float{padding:12px;width:48px;height:48px;justify-content:center;bottom:calc(83px + env(safe-area-inset-bottom));right:12px}.wa-float-label{display:none}}
+
+/* Satu pintu unduhan flyer melalui navigasi utama. */
+.flyer-download-header{display:inline-flex!important;visibility:visible!important;flex:0 0 auto!important}
+@media(max-width:620px){
+  .topbar{gap:6px}
+  .brand{min-width:0}
+  .brand>div{min-width:0}
+  .header-actions{align-items:center;gap:5px}
+  .flyer-download-header{width:auto!important;min-width:0!important;padding:8px 10px!important;gap:5px;min-height:39px}
+  .flyer-download-header .flyer-download-label{display:inline!important;font-size:11px}
+  .flyer-download-header .flyer-download-icon{font-size:16px}
 }
-@media(max-width:440px){
-  .flyer-top-strip{align-items:stretch;flex-direction:column}
-  .flyer-strip-button{width:100%;min-height:44px}
-  .flyer-top-strip-copy strong{font-size:13px}
-  .header-actions{gap:5px}
-  .flyer-download-header{width:40px;min-width:40px;padding:7px}
+@media(max-width:375px){
+  .brand-mark{width:29px;height:29px;font-size:17px}
+  .brand strong{font-size:11px}
+  .flyer-download-header{padding:7px 8px!important}
+  .flyer-download-header .flyer-download-label{font-size:10px}
 }
