@@ -175,3 +175,41 @@ footer{background:linear-gradient(90deg,rgba(6,55,31,.92),rgba(8,73,41,.90))!imp
 .save-status.error{color:#b33636}
 #saveHybridCardBtn:disabled{opacity:.65;cursor:wait}
 @media(max-width:620px){.hybrid-save-bar{margin-left:-16px;margin-right:-16px;margin-bottom:-16px;padding:12px 16px}.hybrid-save-bar .inline-actions{display:grid}.hybrid-save-bar button{width:100%}}
+
+
+/* Flyer PDF: a real static download link available on every page */
+.header-actions{align-items:center}
+.flyer-download{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 13px;border-radius:13px;background:var(--green);color:#fff;text-decoration:none;font-size:12px;font-weight:800;line-height:1.1;min-height:43px;white-space:nowrap;transition:background .16s ease,transform .16s ease}
+.flyer-download:hover{background:#0b5730;transform:translateY(-1px)}
+.flyer-download:focus-visible{outline:3px solid #f4b740;outline-offset:3px}
+.flyer-download-icon{font-size:19px;line-height:1;font-weight:900}
+.flyer-pdf-tag{display:inline-block;margin-left:3px;border:1px solid rgba(255,255,255,.64);border-radius:5px;padding:3px 4px;font-size:9px;vertical-align:middle}
+@media(max-width:620px){.topbar{gap:7px}.brand{min-width:0}.brand>div{min-width:0}.brand strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brand-mark{flex-shrink:0;width:36px;height:36px}.header-actions{gap:5px;flex-shrink:0}.flyer-download{width:42px;min-width:42px;padding:9px;border-radius:12px}.flyer-download-label{display:none}.flyer-download-icon{font-size:23px}}
+
+/* v21: menu flyer always visible in public pages and dashboards */
+.flyer-download-header {display:inline-flex!important;visibility:visible!important;flex:0 0 auto!important}
+.flyer-top-strip {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(18px,4vw);background:#f2f9f0;border-bottom:1px solid #d4e5d7;position:relative;z-index:25}
+.flyer-top-strip-copy {display:flex;gap:10px;align-items:center;min-width:0;color:#163e2a}
+.flyer-top-strip-copy strong {display:block;font-size:14px;font-weight:850;line-height:1.35}
+.flyer-top-strip-copy small {display:block;color:#557563;font-size:11px;margin-top:2px}
+.flyer-top-strip-icon {display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;background:#d9eddd;border-radius:10px;font-size:22px;color:#126c3c}
+.flyer-strip-button,.flyer-hero-link {display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#10643a;color:#fff;text-decoration:none;border:1px solid #095a30;border-radius:13px;font-weight:800;white-space:nowrap;min-height:42px;padding:10px 16px;font-size:13px}
+.flyer-strip-button:hover,.flyer-hero-link:hover {background:#094e2b}
+.flyer-strip-button:focus-visible,.flyer-hero-link:focus-visible {outline:3px solid #f4b740;outline-offset:3px}
+.flyer-hero-link {background:#fff;color:#0d673a;border-color:#bcd8c6}
+.flyer-hero-link:hover {background:#ecf6ee}
+@media(max-width:760px){
+  .flyer-top-strip{padding:9px 14px;gap:9px}
+  .flyer-top-strip-copy strong{font-size:12px}
+  .flyer-top-strip-copy small{font-size:10px}
+  .flyer-strip-button{font-size:12px;padding:8px 11px}
+  .flyer-download-header{min-width:38px;width:auto;padding:8px 10px}
+  .flyer-download-header .flyer-download-label{display:none}
+}
+@media(max-width:440px){
+  .flyer-top-strip{align-items:stretch;flex-direction:column}
+  .flyer-strip-button{width:100%;min-height:44px}
+  .flyer-top-strip-copy strong{font-size:13px}
+  .header-actions{gap:5px}
+  .flyer-download-header{width:40px;min-width:40px;padding:7px}
+}

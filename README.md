@@ -153,3 +153,13 @@ Editor Kartu Pompa Hybrid sekarang menyimpan secara eksplisit ke Firestore. Tomb
 
 ## Update Hero Pompa Hybrid
 Gambar utama kartu pompa hybrid halaman depan sudah ditanamkan langsung ke coding menggunakan foto unit KSA160D Hybrid dengan latar tengah sawah.
+
+## Flyer PDF
+Header includes a Download Flyer PDF link to `assets/Flyer_Pompa_Irigasi_Hybrid_6_Inchi_ENERSIA.pdf`. Upload the full folder structure to GitHub Pages so the relative link resolves under `/hybrid/`. The PDF is included in the PWA offline cache.
+
+## Publikasi menu Flyer PDF (v21)
+- Tombol Flyer PDF tersedia di header (desktop/HP), bar unduh di bawah header, dan halaman utama.
+- File statis wajib ikut di-upload: `assets/Flyer_Pompa_Irigasi_Hybrid_6_Inchi_ENERSIA.pdf`.
+- Upload **isi** ZIP ke lokasi sumber GitHub Pages, bukan ZIP-nya sebagai satu file.
+- Pastikan GitHub Actions/Pages deployment sukses; kemudian refresh dua kali atau buka private window jika service worker versi lama masih terpasang.
+- URL PDF relatif terhadap root situs: `assets/Flyer_Pompa_Irigasi_Hybrid_6_Inchi_ENERSIA.pdf`.
