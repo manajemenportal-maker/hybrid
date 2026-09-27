@@ -45,3 +45,6 @@ Halaman publik menampilkan bagian Divisi Penjualan di atas footer. Admin mengelo
 
 ## Divisi Penjualan terlihat (v32)
 Divisi Penjualan berada di dalam halaman publik sebelum footer, memiliki tombol akses cepat dari beranda dan Ringkasan Admin, serta tetap terlihat walaupun daftar perusahaan masih kosong. CSS, JS, dan cache PWA menggunakan v32. Setelah instalasi perbarui semua isi ZIP ke root Pages; admin harus menambahkan nama perusahaan sebelum kartu nama PT ditampilkan.
+
+## Logo KSA v33
+Logo KSA 3D disematkan sebagai data URI langsung di `index.html` untuk mencegah gambar hilang apabila asset terpisah belum terunggah. File `assets/ksa-logo-3d.webp` tetap disertakan. Cache PWA diperbarui ke v33.
