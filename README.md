@@ -147,3 +147,9 @@ Setup sekali:
 
 ## Registrasi Penerima Online
 Form registrasi serah terima aktif menggunakan Firebase Authentication + Firestore. Penerima mengisi data, provinsi, nomor CPCL, dan membuat password sendiri. Setelah berhasil, akun user dan kode garansi tersimpan online dan dashboard penerima langsung terbuka.
+
+## Simpan Kartu Pompa Hybrid Online
+Editor Kartu Pompa Hybrid sekarang menyimpan secara eksplisit ke Firestore. Tombol menunggu konfirmasi Firebase sebelum menampilkan status sukses. Jika Firestore/Storage menolak perubahan, dashboard menampilkan pesan error dan tidak menganggap perubahan berhasil.
+
+## Update Hero Pompa Hybrid
+Gambar utama kartu pompa hybrid halaman depan sudah ditanamkan langsung ke coding menggunakan foto unit KSA160D Hybrid dengan latar tengah sawah.
