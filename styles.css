@@ -401,3 +401,67 @@ button,a{-webkit-tap-highlight-color:transparent}
 @media(max-width:620px){.hybrid-admin-section{padding:10px}.gallery-editor-content{padding:10px}.gallery-edit-item{grid-template-columns:82px 1fr;gap:9px}.gallery-edit-item img{height:84px}.hybrid-public-gallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hybrid-detail-section{padding:13px}.hybrid-public-gallery figcaption{font-size:10px}}
 
 @media(max-width:900px){.hybrid-save-bar{bottom:calc(74px + env(safe-area-inset-bottom));box-shadow:0 -7px 24px rgba(22,68,39,.07)}}
+
+
+/* KSA 3D logo in header */
+.brand{display:flex;align-items:center}
+.brand-copy{display:flex;align-items:center;gap:8px;min-width:0}
+.brand-text{min-width:0}
+.brand-seal{width:42px;height:42px;object-fit:contain;display:block;filter:drop-shadow(0 6px 12px rgba(0,0,0,.18));flex-shrink:0}
+.brand strong{max-width:146px}
+.brand small{max-width:150px}
+@media(max-width:390px){
+ .brand-copy{gap:6px}
+ .brand-seal{width:32px;height:32px}
+ .brand strong{max-width:95px}
+ .brand small{display:none}
+}
+@media(min-width:391px) and (max-width:620px){
+ .brand-seal{width:36px;height:36px}
+ .brand strong{max-width:118px}
+ .brand small{max-width:122px}
+}
+@media(min-width:621px){
+ .brand-seal{width:48px;height:48px}
+ .brand strong{max-width:200px}
+ .brand small{max-width:205px}
+}
+
+
+/* Divisi Penjualan: responsive footer directory */
+.sales-division{position:relative;padding:34px max(18px,4vw) 42px;background:linear-gradient(140deg,rgba(235,247,236,.96),rgba(247,251,245,.97));border-top:1px solid rgba(19,105,55,.12)}
+.sales-division-inner{max-width:1240px;margin:0 auto}
+.sales-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:850;letter-spacing:.13em;color:#177342}
+.sales-division-heading h2{font-size:clamp(23px,2.7vw,34px);line-height:1.13;margin:9px 0;color:#183e2c;letter-spacing:-.025em}
+.sales-division-heading p{margin:0;color:#547266;font-size:13px;line-height:1.55}
+.sales-agent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px;margin-top:21px}
+.sales-agent-card{display:flex;flex-direction:column;gap:10px;min-width:0;padding:19px 20px;border-radius:20px;background:#fff;border:1px solid #dbebdf;box-shadow:0 9px 26px rgba(17,89,51,.065)}
+.sales-agent-top{display:flex;align-items:center;gap:10px}.sales-agent-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:#ecf8ee;font-size:19px}.sales-agent-index{font-size:10px;letter-spacing:.11em;font-weight:850;color:#19804b}
+.sales-agent-card h3{margin:0;font-size:18px;line-height:1.3;color:#193e2b;overflow-wrap:anywhere}
+.sales-agent-area,.sales-agent-pic{margin:0;font-size:12px;line-height:1.5;color:#52695e}
+.sales-agent-wa{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;padding:12px;border-radius:11px;background:#087746;color:#fff!important;text-decoration:none;font-size:12px;font-weight:800;min-height:44px}
+.sales-agent-wa:hover{background:#086b40}.sales-agent-wa:focus-visible{outline:3px solid #f6b735;outline-offset:2px}
+.sales-agent-wa span:last-child{margin-left:auto}
+.sales-agent-empty{grid-column:1/-1;display:flex;align-items:center;gap:13px;flex-wrap:wrap;padding:14px 17px;border:1px dashed #9fc5aa;border-radius:16px;background:rgba(255,255,255,.76)}
+.sales-agent-empty>span{font-size:23px}.sales-agent-empty p{flex:1 1 220px;color:#456c55;margin:0;font-size:12px}.sales-agent-empty a{color:#087746;font-weight:850;font-size:12px;text-decoration:none}
+.sales-admin-intro{background:linear-gradient(120deg,#f1fbf4,#fff)!important}.sales-admin-intro p{color:#577064;max-width:800px;line-height:1.5}
+.sales-admin-layout{align-items:start}.sales-visible-control{display:flex!important;align-items:center;gap:10px}.sales-visible-control input{width:auto}.sales-admin-count{font-size:11px;font-weight:800;color:#176e40;border-radius:999px;background:#eaf8ee;padding:7px 10px}
+.sales-admin-list{display:grid;gap:11px;margin-top:14px}.sales-admin-agent{border:1px solid #deebe1;border-radius:15px;padding:13px;background:rgba(255,255,255,.86)}
+.sales-admin-line{display:flex;gap:10px;align-items:flex-start}.sales-admin-order{width:27px;height:27px;display:grid;place-items:center;background:#e5f6e9;border-radius:8px;color:#116d3b;font-weight:900;font-size:11px;flex-shrink:0}
+.sales-admin-company{min-width:0;display:grid;gap:3px}.sales-admin-company strong{font-size:13px;overflow-wrap:anywhere}.sales-admin-company small{font-size:11px;color:#67776f}
+.sales-admin-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}.sales-admin-actions button{min-height:34px}.sales-admin-actions button:disabled{opacity:.4;cursor:not-allowed}
+.sales-save-status{min-height:20px;font-size:12px;font-weight:800}.sales-save-status.working{color:#315d94}.sales-save-status.error{color:#af3333}
+@media(max-width:620px){.sales-division{padding:29px 16px 30px}.sales-division-heading h2{font-size:25px}.sales-agent-grid{grid-template-columns:1fr;gap:11px;margin-top:18px}.sales-agent-card{padding:16px;border-radius:17px}.sales-agent-card h3{font-size:17px}.sales-admin-layout{grid-template-columns:1fr}.sales-admin-actions button{flex:1 1 auto}}
+
+/* v32: divisi penjualan selalu ditemukan pada tampilan publik */
+#salesDivision{display:block;scroll-margin-top:110px;min-width:0}
+.sales-division-heading{display:flex;flex-direction:column;align-items:flex-start}
+.sales-updated-note{display:inline-block;margin-top:10px;padding:5px 10px;background:#e4f4e9;color:#146941;border-radius:999px;font-size:11px;font-weight:800}
+.hero-sales-entry{background:#fff!important;color:#0b6540!important;border:1px solid #b4dfc0!important}
+.quick-sales-entry{display:none;width:100%;margin-top:10px;align-items:center;text-align:left;gap:9px;background:linear-gradient(110deg,#e9f8ed,#f3faf5);border:1px solid #c9e8d3;border-radius:13px;color:#125739;padding:12px 13px;font-size:12px;cursor:pointer}
+.quick-sales-entry span:last-child{margin-left:auto;font-size:11px;color:#157a46;font-weight:800}
+.sales-admin-shortcut{display:flex;align-items:center;justify-content:space-between;gap:15px;background:linear-gradient(115deg,#edf9f0,#fff)!important;margin:0 0 16px!important}
+.sales-admin-shortcut h3{margin:4px 0;font-size:18px}.sales-admin-shortcut p{margin:0;color:#547266;font-size:12px}
+.sales-admin-shortcut button{flex:0 0 auto;min-height:42px}
+@media(max-width:900px){.quick-sales-entry{display:flex}}
+@media(max-width:620px){.hero-sales-entry{grid-column:1/-1}.sales-admin-shortcut{flex-direction:column;align-items:stretch}.sales-admin-shortcut button{width:100%}.quick-sales-entry strong{font-size:11px}}

@@ -1,5 +1,5 @@
-const CACHE='lms-pwa-v29';
-const CORE=['./','index.html','styles.css','app.js','manifest.webmanifest','assets/icon.svg'];
+const CACHE='lms-pwa-v32';
+const CORE=['./','index.html','styles.css','app.js','manifest.webmanifest','assets/icon.svg','assets/ksa-logo-3d.webp'];
 self.addEventListener('install',event=>event.waitUntil(
   caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting())
 ));

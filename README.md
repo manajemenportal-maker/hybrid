@@ -36,3 +36,12 @@ Tampilan mobile-first bergaya etalase aplikasi: header dan pencarian ringkas, fo
 Admin → Kartu Pompa Hybrid → Detail Saat Kartu Diklik. Setiap 7 item informasi memiliki galeri tersendiri maksimal 5 foto. Pilih foto (JPEG/PNG/WebP/GIF, maksimal 5 MB per foto), isi keterangan posisi/fungsi komponen pada setiap foto baru, kemudian tekan Simpan Perubahan Online. File foto diunggah ke Firebase Storage (`uploads/{uid}/hybrid-detail/...`); URL dan caption tersimpan di Firestore bersama pengaturan kartu. Foto lama dapat dihapus atau keterangannya diedit. Pengunjung melihat foto dan caption di detail kartu, mengetuk foto akan membukanya ukuran penuh. Admin harus masuk dan Firebase Storage Rules mendukung folder `uploads/{uid}/...`.
 
 Catatan keamanan: aturan lama appData/main masih membuka seluruh payload untuk pembaca publik dan memperbolehkan semua akun login mengubah seluruh dokumen. Pisahkan data pribadi dan terapkan otorisasi admin server-side sebelum memakai data CPCL riil.
+
+## Logo KSA di Header
+Logo 3D KSA ditambahkan pada header sebelah tulisan Listrik Masuk Sawah. File logo disertakan di assets/ksa-logo-3d.webp.
+
+## Divisi Penjualan (v31)
+Halaman publik menampilkan bagian Divisi Penjualan di atas footer. Admin mengelola perusahaan/agen tanpa batas jumlah melalui dashboard > Divisi Penjualan: nama PT, PIC, wilayah, WhatsApp, status tampil, urutan, edit, hapus. Data tersimpan pada settings.salesAgents dan disinkronkan ke Firebase Firestore (appData/main) setelah konfirmasi sukses. Tidak ada perusahaan rekaan bawaan.
+
+## Divisi Penjualan terlihat (v32)
+Divisi Penjualan berada di dalam halaman publik sebelum footer, memiliki tombol akses cepat dari beranda dan Ringkasan Admin, serta tetap terlihat walaupun daftar perusahaan masih kosong. CSS, JS, dan cache PWA menggunakan v32. Setelah instalasi perbarui semua isi ZIP ke root Pages; admin harus menambahkan nama perusahaan sebelum kartu nama PT ditampilkan.

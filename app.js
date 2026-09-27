@@ -260,7 +260,8 @@ const seed = {
     heroBgImage:EMBEDDED_HERO_BG,
     heroBgCredit:'Latar persawahan',
     hybridCard:{...DEFAULT_HYBRID_CARD},
-    houseCards:cloneHouseCards()
+    houseCards:cloneHouseCards(),
+    salesAgents:[]
   },
   products:[
     {id:'P001',name:'Pompa Irigasi Hybrid 6"',icon:'⚙️',category:'Pompa Hybrid',spec:'Diameter 6 inchi • Diesel 15 HP + motor listrik 7,5 kW 3-phase',desc:'Satu unit pompa irigasi hybrid diameter 6 inchi dengan dua sumber penggerak yang dapat digunakan bergantian sesuai ketersediaan energi.',active:true,image:''},
@@ -282,11 +283,48 @@ let currentDashPage = 'home';
 let deferredPrompt;
 
 function clone(obj){ return JSON.parse(JSON.stringify(obj)); }
+function normalizeSalesAgents(items){
+  if(!Array.isArray(items))return [];
+  const used=new Set();
+  return items.filter(x=>x&&typeof x==='object').map((x,i)=>({
+    id:String(x.id||`AGEN-${i+1}`).slice(0,64),
+    company:String(x.company||'').trim().slice(0,160),
+    pic:String(x.pic||'').trim().slice(0,90),
+    area:String(x.area||'').trim().slice(0,120),
+    phone:String(x.phone||'').trim().slice(0,30),
+    visible:x.visible!==false
+  })).filter(x=>x.company&&!used.has(x.id)&&used.add(x.id));
+}
+function salesWhatsAppNumber(value){
+  let digits=String(value||'').replace(/\D/g,'');
+  if(digits.startsWith('00'))digits=digits.slice(2);
+  if(digits.startsWith('0'))digits='62'+digits.slice(1);
+  else if(digits.startsWith('8'))digits='62'+digits;
+  return /^\d{9,15}$/.test(digits)?digits:'';
+}
+function renderSalesDivision(){
+  const host=$('#salesAgentsList');if(!host)return;
+  const agents=normalizeSalesAgents(getDB().settings.salesAgents).filter(x=>x.visible);
+  const count=$('#salesAgentCount');if(count)count.textContent=agents.length?`${agents.length} perusahaan / agen penjualan`:'Informasi penjualan dan kemitraan';
+  host.innerHTML=agents.length?agents.map((agent,i)=>{
+    const wa=salesWhatsAppNumber(agent.phone);
+    const query=encodeURIComponent(`Halo, saya ingin informasi penjualan pompa hybrid Listrik Masuk Sawah melalui ${agent.company}.`);
+    return `<article class="sales-agent-card">
+      <div class="sales-agent-top"><span class="sales-agent-icon" aria-hidden="true">🏢</span><span class="sales-agent-index">AGEN PENJUALAN ${String(i+1).padStart(2,'0')}</span></div>
+      <h3>${esc(agent.company)}</h3>
+      ${agent.area?`<p class="sales-agent-area">📍 ${esc(agent.area)}</p>`:''}
+      ${agent.pic?`<p class="sales-agent-pic">Kontak: ${esc(agent.pic)}</p>`:''}
+      ${wa?`<a class="sales-agent-wa" href="https://wa.me/${wa}?text=${query}" target="_blank" rel="noopener noreferrer" aria-label="Hubungi ${esc(agent.company)} melalui WhatsApp">✆ <span>Hubungi via WhatsApp</span><span aria-hidden="true">↗</span></a>`:''}
+    </article>`;
+  }).join(''):`<div class="sales-agent-empty"><span aria-hidden="true">☎</span><p>Untuk informasi penjualan dan kemitraan, hubungi layanan WhatsApp kami.</p><a href="https://wa.me/6285111033789?text=${encodeURIComponent('Halo, saya ingin informasi divisi penjualan Listrik Masuk Sawah.')}" target="_blank" rel="noopener noreferrer">Hubungi Informasi Penjualan ↗</a></div>`;
+}
+
 function normalizeDB(db){
   const out = clone(seed);
   if(!db || typeof db!=='object') return out;
   out.settings = {...out.settings,...(db.settings||{}),hybridCard:{...DEFAULT_HYBRID_CARD,...(db.settings?.hybridCard||{})}};
   out.settings.hybridCard.detailGallery=normalizeHybridGallery(out.settings.hybridCard.detailGallery);
+  out.settings.salesAgents=normalizeSalesAgents(db.settings?.salesAgents);
   const incomingHouses=db.settings?.houseCards||{};
   out.settings.houseCards={};
   ['open','semi','secure'].forEach(type=>{out.settings.houseCards[type]={...DEFAULT_HOUSE_CARDS[type],...(incomingHouses[type]||{})};});
@@ -452,7 +490,7 @@ function renderPublic(){
   $('#statBeneficiaries').textContent=db.beneficiaries.length;
   $('#statGroups').textContent=new Set(db.beneficiaries.map(x=>x.group).filter(Boolean)).size;
   $('#statWarranty').textContent=db.beneficiaries.filter(x=>warrantyStatus(x).label==='Aktif').length;
-  applyHeroBackground(); renderHybridHero(); renderProducts(); fillProvinceFilter(); renderCPCL(); renderHouseCards();
+  applyHeroBackground(); renderHybridHero(); renderProducts(); fillProvinceFilter(); renderCPCL(); renderHouseCards(); renderSalesDivision();
 }
 function renderProducts(){
   const db=getDB(), q=($('#productSearch')?.value||'').toLowerCase();
@@ -728,7 +766,7 @@ function logout(writeAudit=true){
   $('#authView').hidden=true;$('#dashboardView').hidden=true;$('#publicView').hidden=false;$('#loginBtn').hidden=false;$('#logoutBtn').hidden=true;setSidebarOpen(false);syncMobileNavigation();renderPublic();
 }
 
-const adminMenus=[['home','Ringkasan','🏠'],['hybridcard','Kartu Pompa Hybrid','🚜'],['houses','Rumah Pompa','🏠'],['beneficiaries','CPCL & Penerima','📍'],['products','Produk','⚙️'],['warranty','Garansi & Klaim','🛡️'],['users','User','👥'],['settings','Website & Data','🖥️'],['audit','Aktivitas','🧾']];
+const adminMenus=[['home','Ringkasan','🏠'],['hybridcard','Kartu Pompa Hybrid','🚜'],['houses','Rumah Pompa','🏠'],['beneficiaries','CPCL & Penerima','📍'],['products','Produk','⚙️'],['warranty','Garansi & Klaim','🛡️'],['users','User','👥'],['sales','Divisi Penjualan','🏢'],['settings','Website & Data','🖥️'],['audit','Aktivitas','🧾']];
 const userMenus=[['home','Ringkasan','🏠'],['asset','Unit Bantuan','⚙️'],['warranty','Garansi','🛡️'],['claim','Klaim & Servis','🧰'],['profile','Profil','👤']];
 function buildDashNav(role){const menus=role==='admin'?adminMenus:userMenus;$('#dashNav').innerHTML=menus.map(m=>`<button data-dash="${m[0]}">${m[2]} ${m[1]}</button>`).join('');$$('[data-dash]').forEach(b=>b.onclick=()=>navigateDash(b.dataset.dash));}
 function navigateDash(page){
@@ -740,7 +778,7 @@ function adminPage(page){
   const db=getDB();
   if(page==='home'){
     const activeW=db.beneficiaries.filter(x=>warrantyStatus(x).label==='Aktif').length, openClaims=db.claims.filter(x=>!['Selesai','Ditolak'].includes(x.status)).length;
-    return `<div class="kpi-grid">${kpi('CPCL',db.beneficiaries.length)}${kpi('User Aktif',db.users.filter(x=>x.status==='aktif').length)}${kpi('Garansi Aktif',activeW)}${kpi('Klaim Terbuka',openClaims)}</div>
+    return `<div class="panel sales-admin-shortcut"><div><span class="eyebrow">JARINGAN PENJUALAN</span><h3>Divisi Penjualan & Agen</h3><p>Kelola daftar PT/perusahaan, nomor WhatsApp, dan agen penjualan dari sini.</p></div><button type="button" class="primary" id="openSalesAdmin">Kelola Divisi Penjualan →</button></div><div class="kpi-grid">${kpi('CPCL',db.beneficiaries.length)}${kpi('User Aktif',db.users.filter(x=>x.status==='aktif').length)}${kpi('Garansi Aktif',activeW)}${kpi('Klaim Terbuka',openClaims)}</div>
       <div class="grid-2"><div class="panel"><h3>Status CPCL</h3>${['Verifikasi','Siap Serah Terima','Aktif'].map(s=>`<div class="claim-item"><b>${s}</b><p>${db.beneficiaries.filter(x=>x.status===s).length} data</p></div>`).join('')}</div>
       <div class="panel"><h3>Aktivitas Terbaru</h3>${db.audit.slice(0,6).map(a=>`<div class="claim-item"><b>${esc(a.action)}</b><p>${esc(a.user)} • ${new Date(a.at).toLocaleString('id-ID')}</p></div>`).join('')||'<p class="muted">Belum ada aktivitas.</p>'}</div></div>`;
   }
@@ -805,6 +843,29 @@ function adminPage(page){
     return `<div class="panel house-admin-intro"><div><span class="eyebrow">KONTROL HALAMAN DEPAN</span><h3>Editor Referensi Rumah Pompa Hybrid</h3><p class="muted">Kelola foto, informasi, dan detail tiga pilihan rumah pompa yang ditampilkan di halaman utama.</p></div></div><div class="house-admin-grid">${cards}</div>`;
   }
 
+  if(page==='sales'){
+    const agents=normalizeSalesAgents(db.settings.salesAgents);
+    return `<div class="panel sales-admin-intro"><span class="eyebrow">PENGELOLAAN MITRA</span><h3>Divisi Penjualan & Agen</h3><p>Tambahkan lebih dari satu perusahaan atau agen penjualan. Hanya perusahaan yang diaktifkan yang akan tampil pada bagian bawah website. Urutan dapat disesuaikan kapan saja.</p></div>
+      <div class="grid-2 sales-admin-layout">
+        <div class="panel"><div class="panel-title-row"><h3 id="salesFormTitle">Tambah Perusahaan / Agen</h3><button type="button" class="ghost" id="cancelSalesEdit" hidden>Batal Edit</button></div>
+          <form id="salesAgentForm" class="dash-form">
+            <input type="hidden" name="editId">
+            <label>Nama PT / Perusahaan / Agen<input name="company" maxlength="160" placeholder="Isi nama perusahaan atau agen" autocomplete="organization" required></label>
+            <label>Nama PIC / Kontak (opsional)<input name="pic" maxlength="90" placeholder="Nama kontak penjualan"></label>
+            <label>Wilayah Penjualan (opsional)<input name="area" maxlength="120" placeholder="Contoh: Tangerang dan sekitarnya"></label>
+            <label>WhatsApp Perusahaan (opsional)<input name="phone" inputmode="tel" maxlength="30" placeholder="08... atau +62..."></label>
+            <label class="sales-visible-control"><input name="visible" type="checkbox" checked> Tampilkan perusahaan di website</label>
+            <button class="primary" type="submit" id="saveSalesAgentBtn">Simpan Perusahaan Online</button>
+            <div class="sales-save-status" id="salesSaveStatus" role="status" aria-live="polite"></div>
+          </form></div>
+        <div class="panel"><div class="panel-title-row"><h3>Daftar Perusahaan</h3><span class="sales-admin-count">${agents.length} perusahaan</span></div>
+          <div class="sales-admin-list">${agents.length?agents.map((agent,i)=>`<div class="sales-admin-agent">
+            <div class="sales-admin-line"><span class="sales-admin-order">${i+1}</span><div class="sales-admin-company"><strong>${esc(agent.company)}</strong><small>${esc(agent.area||'Wilayah belum diisi')} · ${agent.visible?'Tampil di website':'Disembunyikan'}</small>${agent.pic?`<small>Kontak: ${esc(agent.pic)}</small>`:''}</div></div>
+            <div class="sales-admin-actions"><button class="small-btn" type="button" data-sales-edit="${esc(agent.id)}">Edit</button><button class="small-btn" type="button" data-sales-toggle="${esc(agent.id)}">${agent.visible?'Sembunyikan':'Tampilkan'}</button><button class="small-btn" type="button" data-sales-up="${esc(agent.id)}" ${i===0?'disabled':''} aria-label="Naikkan urutan ${esc(agent.company)}">↑</button><button class="small-btn" type="button" data-sales-down="${esc(agent.id)}" ${i===agents.length-1?'disabled':''} aria-label="Turunkan urutan ${esc(agent.company)}">↓</button><button class="small-btn red" type="button" data-sales-delete="${esc(agent.id)}">Hapus</button></div>
+          </div>`).join(''):'<p class="muted">Belum ada perusahaan yang ditambahkan.</p>'}</div>
+        </div>
+      </div>`;
+  }
   if(page==='beneficiaries'){
     return `<div class="panel"><div class="panel-title-row"><h3 id="cpclFormTitle">Tambah CPCL / Penerima</h3><button type="button" class="ghost" id="cancelEditCPCL" hidden>Batal Edit</button></div>
       <form id="beneficiaryForm" class="dash-form grid-2"><input type="hidden" name="editId">
@@ -895,8 +956,76 @@ function setHybridSaveBusy(busy){
 }
 
 function bindDashActions(page,u){
+  $('#openSalesAdmin')?.addEventListener('click',()=>navigateDash('sales'));
   $$('[data-kpi-target]').forEach(card=>{card.onclick=()=>navigateDash(card.dataset.kpiTarget);card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();navigateDash(card.dataset.kpiTarget)}}});
   if(u.role==='admin'){
+    if(page==='sales'){
+      const form=$('#salesAgentForm');
+      const status=$('#salesSaveStatus');
+      const setStatus=(message,kind='')=>{if(status){status.textContent=message;status.className='sales-save-status '+kind;}};
+      const busy=(value)=>{
+        $$('#salesAgentForm button, .sales-admin-actions button').forEach(b=>b.disabled=value);
+        const btn=$('#saveSalesAgentBtn');if(btn)btn.textContent=value?'Menyimpan ke Firebase...': 'Simpan Perusahaan Online';
+      };
+      const persist=async(updated,action,detail)=>{
+        if(!firebaseDb||!cloudReady||!firebaseAuth?.currentUser){setStatus('Koneksi Firebase belum siap. Masuk kembali dan periksa internet.','error');return false;}
+        const db=clone(getDB());
+        db.settings.salesAgents=normalizeSalesAgents(updated);
+        auditLater(db,action,detail);
+        busy(true);setStatus('Menyimpan daftar perusahaan ke Firebase...','working');
+        try{
+          const ok=await pushCloudNow(db);
+          if(!ok){setStatus('Perubahan gagal disimpan online. Periksa Firestore Rules dan koneksi.','error');return false;}
+          localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));
+          renderPublic();
+          navigateDash('sales');
+          toast('Divisi Penjualan tersimpan online');
+          return true;
+        }finally{busy(false)}
+      };
+      form?.addEventListener('submit',async e=>{
+        e.preventDefault();
+        const f=new FormData(form),company=String(f.get('company')||'').trim(),phone=String(f.get('phone')||'').trim();
+        if(!company){setStatus('Nama perusahaan wajib diisi.','error');return}
+        if(phone&&!salesWhatsAppNumber(phone)){setStatus('Nomor WhatsApp tidak valid. Gunakan nomor Indonesia, misalnya 08... atau +62...','error');return}
+        const agents=normalizeSalesAgents(getDB().settings.salesAgents),editId=String(f.get('editId')||'');
+        const item={id:editId||uid('AGEN'),company,pic:String(f.get('pic')||'').trim(),area:String(f.get('area')||'').trim(),phone,visible:f.get('visible')==='on'};
+        const i=agents.findIndex(a=>a.id===editId);
+        if(editId&&i<0){setStatus('Data agen tidak ditemukan. Muat ulang halaman.','error');return}
+        if(i>=0)agents[i]=item;else agents.push(item);
+        await persist(agents,i>=0?'EDIT_AGEN_PENJUALAN':'TAMBAH_AGEN_PENJUALAN',company);
+      });
+      $('#cancelSalesEdit')?.addEventListener('click',()=>navigateDash('sales'));
+      $$('[data-sales-edit]').forEach(b=>b.addEventListener('click',()=>{
+        const agent=normalizeSalesAgents(getDB().settings.salesAgents).find(x=>x.id===b.dataset.salesEdit);
+        if(!agent)return;
+        form.elements.editId.value=agent.id;
+        ['company','pic','area','phone'].forEach(k=>form.elements[k].value=agent[k]||'');
+        form.elements.visible.checked=agent.visible;
+        $('#salesFormTitle').textContent='Edit Perusahaan / Agen';
+        $('#saveSalesAgentBtn').textContent='Simpan Perubahan Online';
+        $('#cancelSalesEdit').hidden=false;
+        form.scrollIntoView({behavior:'smooth',block:'start'});
+      }));
+      $$('[data-sales-toggle]').forEach(b=>b.addEventListener('click',async()=>{
+        const agents=normalizeSalesAgents(getDB().settings.salesAgents),item=agents.find(x=>x.id===b.dataset.salesToggle);
+        if(!item)return;item.visible=!item.visible;
+        await persist(agents,'UBAH_STATUS_AGEN_PENJUALAN',item.company);
+      }));
+      $$('[data-sales-delete]').forEach(b=>b.addEventListener('click',async()=>{
+        const agents=normalizeSalesAgents(getDB().settings.salesAgents),item=agents.find(x=>x.id===b.dataset.salesDelete);
+        if(!item||!confirm(`Hapus ${item.company} dari daftar divisi penjualan?`))return;
+        await persist(agents.filter(x=>x.id!==item.id),'HAPUS_AGEN_PENJUALAN',item.company);
+      }));
+      const move=async(id,delta)=>{
+        const agents=normalizeSalesAgents(getDB().settings.salesAgents),i=agents.findIndex(x=>x.id===id),j=i+delta;
+        if(i<0||j<0||j>=agents.length)return;
+        [agents[i],agents[j]]=[agents[j],agents[i]];
+        await persist(agents,'URUTAN_AGEN_PENJUALAN',agents[j].company);
+      };
+      $$('[data-sales-up]').forEach(b=>b.addEventListener('click',()=>move(b.dataset.salesUp,-1)));
+      $$('[data-sales-down]').forEach(b=>b.addEventListener('click',()=>move(b.dataset.salesDown,1)));
+    }
     const hybridForm=$('#hybridCardForm');
     if(hybridForm){
       const draftGallery=normalizeHybridGallery(hybridCardSettings().detailGallery);
@@ -1241,11 +1370,11 @@ function bind(){
   });
   document.addEventListener('keydown',e=>{if(!['Enter',' '].includes(e.key))return;if(e.target.matches('input,select,textarea,button,a'))return;const el=e.target.closest('[data-product-id],[data-cpcl-id],[data-house],[data-summary]');if(!el)return;e.preventDefault();if(el.dataset.productId)openProductDetail(el.dataset.productId);else if(el.dataset.cpclId)openCPCLDetail(el.dataset.cpclId);else if(el.dataset.house)openHouseDetail(el.dataset.house);else if(el.dataset.summary)openSummaryDetail(el.dataset.summary)});
   $$('.auth-tabs .tab').forEach(b=>b.onclick=()=>switchAuthTab(b.dataset.authTab));$('#loginForm').onsubmit=e=>{e.preventDefault();login($('#loginEmail').value,$('#loginPassword').value)};const rp=$('#regProvince');if(rp)rp.innerHTML='<option value="">Pilih Provinsi</option>'+provinceOptions();$('#registerForm').onsubmit=e=>{e.preventDefault();registerBeneficiary(e.target)};
-  $('#productSearch').oninput=renderProducts;$('#provinceFilter').onchange=renderCPCL;$('#statusFilter').onchange=renderCPCL;$$('[data-scroll]').forEach(b=>b.onclick=()=>{closeAuth();document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:'smooth'})});$('#toggleSidebar').onclick=()=>setSidebarOpen(!$('.sidebar')?.classList.contains('open'));$('#sidebarBackdrop').onclick=()=>setSidebarOpen(false);$('#mobileBottom').addEventListener('click',e=>{const b=e.target.closest('[data-mobile-target]');if(b)mobileNavigationAction(b.dataset.mobileTarget)});$('#mobileSearchTrigger').onclick=()=>{document.querySelector('#produk')?.scrollIntoView({behavior:'smooth'});setTimeout(()=>$('#productSearch')?.focus({preventScroll:true}),430)};
+  $('#productSearch').oninput=renderProducts;$('#provinceFilter').onchange=renderCPCL;$('#statusFilter').onchange=renderCPCL;$$('[data-scroll]').forEach(b=>b.onclick=()=>{closeAuth();document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:b.dataset.scroll==='#salesDivision'?'auto':'smooth',block:'start'})});$('#toggleSidebar').onclick=()=>setSidebarOpen(!$('.sidebar')?.classList.contains('open'));$('#sidebarBackdrop').onclick=()=>setSidebarOpen(false);$('#mobileBottom').addEventListener('click',e=>{const b=e.target.closest('[data-mobile-target]');if(b)mobileNavigationAction(b.dataset.mobileTarget)});$('#mobileSearchTrigger').onclick=()=>{document.querySelector('#produk')?.scrollIntoView({behavior:'smooth'});setTimeout(()=>$('#productSearch')?.focus({preventScroll:true}),430)};
   $('#warrantyCheckForm').onsubmit=e=>{e.preventDefault();const code=$('#warrantyCodeCheck').value.trim().toUpperCase(),db=getDB(),b=db.beneficiaries.find(x=>String(x.warrantyCode||'').toUpperCase()===code),out=$('#warrantyCheckResult');if(!b){out.innerHTML='<div class="result-card warn"><b>Kode tidak ditemukan</b><p>Periksa kembali kode atau hubungi admin proyek.</p></div>';return}const w=warrantyStatus(b);out.innerHTML=`<div class="result-card ${w.cls}"><b>${w.label}</b><p>${esc(b.name)} • ${esc(b.group)}<br>${esc(b.asset)} • ${esc(b.serial||'No. seri belum diisi')}<br>Mulai: ${fmtDate(b.warrantyStart)} ${w.end?`• Berakhir: ${w.end.toLocaleDateString('id-ID')}`:''}</p></div>`};
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('#installBtn').hidden=false});
 $('#installBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('#installBtn').hidden=true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=29',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=32',{updateViaCache:'none'}).catch(()=>{}));
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#detailView').hidden)closeDetail();else if(!$('#authView').hidden)closeAuth()}});
 bind();renderPublic();syncMobileNavigation();initFirebaseOnline();if(currentUser())showDashboard();
