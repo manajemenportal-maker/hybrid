@@ -213,3 +213,20 @@ footer{background:linear-gradient(90deg,rgba(6,55,31,.92),rgba(8,73,41,.90))!imp
   .header-actions{gap:5px}
   .flyer-download-header{width:40px;min-width:40px;padding:7px}
 }
+
+/* Footer identitas dan kontak WhatsApp */
+.site-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;padding:32px max(18px,4vw)}
+.footer-brand{line-height:1.65}
+.footer-contact{display:flex;flex-direction:column;align-items:flex-end;gap:10px;min-width:0}
+.footer-wa-link{display:inline-flex;align-items:center;justify-content:center;gap:10px;color:white!important;background:#128C43;border:1px solid rgba(255,255,255,.34);border-radius:999px;text-decoration:none;font-weight:650;padding:11px 16px;min-height:46px;transition:background .18s ease,transform .18s ease}
+.footer-wa-link span{color:white!important;font-size:13px}
+.footer-wa-link strong{white-space:nowrap}
+.footer-wa-link .wa-icon{flex:0 0 auto;color:white}
+.footer-wa-link:hover{background:#0e7638;transform:translateY(-1px)}
+.footer-wa-link:focus-visible,.wa-float:focus-visible{outline:3px solid #ffe28a;outline-offset:3px}
+.footer-copyright{color:#d6e9dc!important;font-size:12px;letter-spacing:.02em}
+.wa-float{position:fixed;right:18px;bottom:22px;z-index:45;display:inline-flex;align-items:center;gap:9px;padding:13px 16px;background:#25D366;color:#073c1f;text-decoration:none;border-radius:999px;box-shadow:0 9px 28px rgba(0,0,0,.23);border:1px solid rgba(255,255,255,.65);font-weight:800;font-size:12px;transition:transform .18s ease,background .18s ease}
+.wa-float .wa-icon{width:24px;height:24px;flex:0 0 auto}
+.wa-float:hover{background:#2feb76;transform:translateY(-2px)}
+@media(max-width:900px){.wa-float{bottom:calc(81px + env(safe-area-inset-bottom));right:12px}}
+@media(max-width:620px){.site-footer{align-items:flex-start;gap:18px}.footer-contact{align-items:flex-start;width:100%}.footer-wa-link{width:100%;justify-content:flex-start}.wa-float{padding:12px;width:48px;height:48px;justify-content:center;bottom:calc(83px + env(safe-area-inset-bottom));right:12px}.wa-float-label{display:none}}

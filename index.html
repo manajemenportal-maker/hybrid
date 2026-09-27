@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f6b3b" />
-  <meta name="description" content="PWA Program Listrik Masuk Sawah - Pompa Irigasi Hybrid, CPCL, Garansi dan Monitoring Bantuan." />
+  <meta name="description" content="Listrik Masuk Sawah — Pompa Irigasi Hybrid, CPCL, Garansi, dan Layanan Purna Jual." />
   <title>Listrik Masuk Sawah</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=23" />
+  <link rel="stylesheet" href="styles.css?v=26" />
   <link rel="preconnect" href="https://unpkg.com">
 </head>
 <body>
@@ -31,7 +31,7 @@
     </div>
   </header>
   <div class="flyer-top-strip" aria-label="Unduhan flyer produk">
-    <div class="flyer-top-strip-copy"><span class="flyer-top-strip-icon" aria-hidden="true">▤</span><span><strong>Flyer Pompa Hybrid ENERSIA 6 Inchi</strong><small>Informasi produk dalam PDF satu halaman</small></span></div>
+    <div class="flyer-top-strip-copy"><span class="flyer-top-strip-icon" aria-hidden="true">▤</span><span><strong>Flyer Pompa Hybrid ENERSIA 6 Inchi</strong></span></div>
     <a class="flyer-strip-button" href="./Flyer_ENERSIA_Pompa_Hybrid_6_Inchi.pdf" download="Flyer_ENERSIA_Pompa_Hybrid_6_Inchi.pdf" type="application/pdf">⬇ Download Flyer PDF</a>
   </div>
 
@@ -41,7 +41,7 @@
         <div class="hero-copy">
           <span class="eyebrow">Program elektrifikasi pertanian</span>
           <h1 id="heroTitle">Pompa irigasi hybrid untuk sawah yang lebih tangguh.</h1>
-          <p id="heroText">Satu sistem, dua sumber penggerak: motor diesel dan motor listrik. Aplikasi ini juga mengelola CPCL, lokasi kelompok, rumah pompa, bantuan, garansi, serta layanan purna jual.</p>
+          <p id="heroText">Satu pompa irigasi dengan dua pilihan sumber tenaga: diesel dan motor listrik yang bekerja bergantian. Dilengkapi layanan informasi penerima bantuan, lokasi kelompok tani, garansi, dan purna jual.</p>
           <div class="hero-actions">
             <button class="primary" data-scroll="#produk">Lihat Peralatan</button>
             <button class="secondary" data-scroll="#cpcl">Lihat CPCL & Titik Kelompok</button>
@@ -56,11 +56,11 @@
         <div class="hero-card click-card" data-summary="hybrid" role="button" tabindex="0">
           <div class="hybrid-visual">
             <div class="pump-core">POMPA<br><strong>HYBRID</strong></div>
-            <div class="drive diesel">DIESEL<br><small>12 HP*</small></div>
+            <div class="drive diesel">DIESEL<br><small>15 HP</small></div>
             <div class="shaft">⇄</div>
-            <div class="drive electric">MOTOR<br><small>7,5 kW*</small></div>
+            <div class="drive electric">MOTOR<br><small>7,5 kW</small></div>
           </div>
-          <p class="muted">*Konfigurasi contoh. Spesifikasi dapat diubah oleh admin sesuai paket proyek.</p>
+          <p class="muted">Diesel dan motor listrik digunakan secara bergantian sesuai kebutuhan operasi.</p>
         </div>
       </section>
 
@@ -94,7 +94,7 @@
         <div class="map-shell">
           <div class="map-placeholder" id="mapPlaceholder">
             <div class="map-pattern"></div>
-            <div class="map-label">Peta titik kelompok</div>
+            <div class="map-label">Sebaran titik kelompok tani</div>
             <div id="mapPins"></div>
           </div>
           <div id="cpclList" class="cpcl-list"></div>
@@ -119,7 +119,7 @@
             <p>Masukkan kode unik yang diterima saat registrasi serah terima bantuan.</p>
           </div>
           <form id="warrantyCheckForm" class="inline-form">
-            <input id="warrantyCodeCheck" placeholder="Contoh: LMS-AB12CD34" required />
+            <input id="warrantyCodeCheck" placeholder="Masukkan kode garansi Anda" required />
             <button class="primary">Cek Garansi</button>
           </form>
           <div id="warrantyCheckResult"></div>
@@ -150,13 +150,13 @@
           <label>Email<input id="regEmail" name="email" type="email" autocomplete="email" required></label>
           <label>Provinsi<select id="regProvince" name="province" required><option value="">Pilih Provinsi</option></select></label>
           <label>Desa / Kecamatan<input id="regVillage" name="village" required></label>
-          <label>ID Bantuan / Nomor CPCL<input id="regCpcl" name="cpcl" placeholder="Mis. CPCL-2026-001" autocomplete="off" required></label>
+          <label>ID Bantuan / Nomor CPCL<input id="regCpcl" name="cpcl" placeholder="CPCL-2026-001" autocomplete="off" required></label>
           <label>Buat Password<input id="regPassword" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="Minimal 6 karakter" required></label>
           <label>Ulangi Password<input id="regPasswordConfirm" name="passwordConfirm" type="password" minlength="6" autocomplete="new-password" required></label>
           <label class="consent-row"><input id="regConsent" name="consent" type="checkbox" required> <span>Saya menyatakan data serah terima yang diisi benar.</span></label>
           <button class="primary" id="registerSubmit" type="submit">Daftar & Buat Kode Garansi</button>
           <div id="registerMessage" class="form-message" role="status" aria-live="polite"></div>
-          <small class="muted">Setelah berhasil, akun penerima dibuat di Firebase dan kode garansi aktif tersimpan secara online.</small>
+          <small class="muted">Setelah registrasi berhasil, akun penerima dan kode garansi siap digunakan.</small>
         </form>
       </div>
     </section>
@@ -194,9 +194,16 @@
     </section>
   </main>
 
-  <footer>
-    <div><strong>Listrik Masuk Sawah</strong><br><span id="footerText">Sistem informasi bantuan pompa irigasi hybrid.</span></div>
+  <footer class="site-footer">
+    <div class="footer-brand"><strong>Listrik Masuk Sawah</strong><br><span id="footerText">Listrik untuk Sawah, Energi untuk Negeri.</span></div>
+    <div class="footer-contact">
+      <a class="footer-wa-link" href="https://wa.me/6285111033789?text=Halo%2C%20saya%20ingin%20informasi%20Program%20Listrik%20Masuk%20Sawah." target="_blank" rel="noopener noreferrer" aria-label="Hubungi informasi program melalui WhatsApp 085111033789">
+        <svg class="wa-icon" viewBox="0 0 24 24" width="23" height="23" fill="currentColor" aria-hidden="true" focusable="false"><path d="M20.52 3.48A11.88 11.88 0 0 0 12.05 0C5.44 0 .06 5.38.06 12c0 2.12.55 4.18 1.6 6L0 24l6.15-1.61A11.96 11.96 0 0 0 12.05 24C18.67 24 24 18.62 24 12c0-3.2-1.24-6.21-3.48-8.52zM12.05 21.9c-1.76 0-3.48-.47-4.98-1.36l-.36-.21-3.65.96.97-3.56-.24-.37a9.87 9.87 0 0 1-1.52-5.35c0-5.43 4.4-9.84 9.82-9.84 2.63 0 5.09 1.03 6.94 2.88a9.74 9.74 0 0 1 2.87 6.96c0 5.43-4.41 9.85-9.85 9.85zm5.42-7.37c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.66.15-.2.3-.76.96-.93 1.16-.17.2-.34.22-.63.07-.3-.15-1.26-.47-2.4-1.49-.9-.8-1.5-1.79-1.67-2.09-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.66-1.59-.9-2.18-.24-.57-.48-.49-.66-.5h-.56c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.06 2.87 1.21 3.07c.15.2 2.1 3.2 5.09 4.49.71.31 1.27.5 1.71.65.72.23 1.38.2 1.9.12.58-.08 1.75-.72 2-1.42.25-.7.25-1.3.17-1.42-.07-.13-.27-.2-.57-.35z"/></svg><span>Informasi WhatsApp <strong>085111033789</strong></span>
+      </a>
+      <small class="footer-copyright">@kalimajasuryaalam-2026</small>
+    </div>
   </footer>
+  <a class="wa-float" href="https://wa.me/6285111033789?text=Halo%2C%20saya%20ingin%20informasi%20Program%20Listrik%20Masuk%20Sawah." target="_blank" rel="noopener noreferrer" aria-label="Chat WhatsApp informasi Listrik Masuk Sawah di 085111033789" title="Hubungi WhatsApp 085111033789"><svg class="wa-icon" viewBox="0 0 24 24" width="23" height="23" fill="currentColor" aria-hidden="true" focusable="false"><path d="M20.52 3.48A11.88 11.88 0 0 0 12.05 0C5.44 0 .06 5.38.06 12c0 2.12.55 4.18 1.6 6L0 24l6.15-1.61A11.96 11.96 0 0 0 12.05 24C18.67 24 24 18.62 24 12c0-3.2-1.24-6.21-3.48-8.52zM12.05 21.9c-1.76 0-3.48-.47-4.98-1.36l-.36-.21-3.65.96.97-3.56-.24-.37a9.87 9.87 0 0 1-1.52-5.35c0-5.43 4.4-9.84 9.82-9.84 2.63 0 5.09 1.03 6.94 2.88a9.74 9.74 0 0 1 2.87 6.96c0 5.43-4.41 9.85-9.85 9.85zm5.42-7.37c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.66.15-.2.3-.76.96-.93 1.16-.17.2-.34.22-.63.07-.3-.15-1.26-.47-2.4-1.49-.9-.8-1.5-1.79-1.67-2.09-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.66-1.59-.9-2.18-.24-.57-.48-.49-.66-.5h-.56c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.06 2.87 1.21 3.07c.15.2 2.1 3.2 5.09 4.49.71.31 1.27.5 1.71.65.72.23 1.38.2 1.9.12.58-.08 1.75-.72 2-1.42.25-.7.25-1.3.17-1.42-.07-.13-.27-.2-.57-.35z"/></svg><span class="wa-float-label">Tanya via WhatsApp</span></a>
 
   <nav class="mobile-bottom" id="mobileBottom">
     <button data-scroll="#produk"><span>⚙️</span>Produk</button>
@@ -210,6 +217,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
-  <script src="app.js?v=23"></script>
+  <script src="app.js?v=26"></script>
 </body>
 </html>

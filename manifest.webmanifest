@@ -5,7 +5,7 @@
   "display": "standalone",
   "background_color": "#fbfcfa",
   "theme_color": "#0f6b3b",
-  "description": "PWA pengelolaan pompa irigasi hybrid, CPCL, bantuan dan garansi.",
+  "description": "Informasi pompa irigasi hybrid, CPCL, bantuan, dan layanan garansi.",
   "icons": [
     {
       "src": "assets/icon.svg",
