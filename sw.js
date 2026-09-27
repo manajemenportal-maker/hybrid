@@ -1,5 +1,5 @@
-const CACHE='lms-pwa-v21';
-const CORE=['./','index.html','styles.css','app.js','manifest.webmanifest','assets/icon.svg','assets/Flyer_Pompa_Irigasi_Hybrid_6_Inchi_ENERSIA.pdf'];
+const CACHE='lms-pwa-v23';
+const CORE=['./','index.html','styles.css','app.js','manifest.webmanifest','assets/icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(
   caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting())
 ));

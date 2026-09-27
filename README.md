@@ -154,12 +154,17 @@ Editor Kartu Pompa Hybrid sekarang menyimpan secara eksplisit ke Firestore. Tomb
 ## Update Hero Pompa Hybrid
 Gambar utama kartu pompa hybrid halaman depan sudah ditanamkan langsung ke coding menggunakan foto unit KSA160D Hybrid dengan latar tengah sawah.
 
-## Flyer PDF
-Header includes a Download Flyer PDF link to `assets/Flyer_Pompa_Irigasi_Hybrid_6_Inchi_ENERSIA.pdf`. Upload the full folder structure to GitHub Pages so the relative link resolves under `/hybrid/`. The PDF is included in the PWA offline cache.
 
-## Publikasi menu Flyer PDF (v21)
-- Tombol Flyer PDF tersedia di header (desktop/HP), bar unduh di bawah header, dan halaman utama.
-- File statis wajib ikut di-upload: `assets/Flyer_Pompa_Irigasi_Hybrid_6_Inchi_ENERSIA.pdf`.
-- Upload **isi** ZIP ke lokasi sumber GitHub Pages, bukan ZIP-nya sebagai satu file.
-- Pastikan GitHub Actions/Pages deployment sukses; kemudian refresh dua kali atau buka private window jika service worker versi lama masih terpasang.
-- URL PDF relatif terhadap root situs: `assets/Flyer_Pompa_Irigasi_Hybrid_6_Inchi_ENERSIA.pdf`.
+## Perbaikan Flyer v23 (GitHub Pages)
+Halaman HTML kembali ringan. File PDF bukan lagi Base64 di `index.html` dan tombol Download bekerja dengan tautan bawaan browser tanpa bergantung pada JavaScript.
+
+Upload **SELURUH ISI** ZIP ke root repository/folder yang dipakai GitHub Pages (`/hybrid/`):
+- `index.html`
+- `app.js`, `styles.css`, `sw.js`, `manifest.webmanifest`
+- `Flyer_ENERSIA_Pompa_Hybrid_6_Inchi.pdf` (HARUS satu folder dengan `index.html`)
+- folder `assets` dan file konfigurasi lainnya.
+
+URL PDF setelah deployment:
+`https://manajemenportal-maker.github.io/hybrid/Flyer_ENERSIA_Pompa_Hybrid_6_Inchi.pdf`
+
+Jangan mengunggah ZIP sebagai satu berkas atau mengganti `index.html` saja. Upload berkas hasil ekstraksi; pastikan PDF ada di lokasi di atas. Jika GitHub Pages mengambil sumber dari folder `docs`, masukkan semuanya ke folder `docs` tersebut.
