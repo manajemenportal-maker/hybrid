@@ -220,3 +220,158 @@ footer{background:linear-gradient(90deg,rgba(6,55,31,.92),rgba(8,73,41,.90))!imp
   .flyer-download-header{padding:7px 8px!important}
   .flyer-download-header .flyer-download-label{font-size:10px}
 }
+
+
+/* ====================================================
+   V28 — app-first mobile storefront, inspired by modern
+   marketplace usability patterns; exclusive LMS branding.
+   ==================================================== */
+:root{--fresh-green:#087a4a;--fresh-deep:#075c39;--fresh-accent:#eaf8ef;--fresh-bg:#f4f8f5;--fresh-text:#163b2a}
+:focus-visible{outline:3px solid #e8ab36;outline-offset:3px}
+button,a{-webkit-tap-highlight-color:transparent}
+#produk,#cpcl,#rumahPompa,#garansi,#publicView{scroll-margin-top:106px}
+.mobile-storefront-strip,.mobile-quick-access{display:none}
+.sidebar-backdrop[hidden]{display:none!important}
+#toggleSidebar{align-items:center;gap:6px}
+#toggleSidebar svg{width:18px;height:18px}
+
+@media(max-width:900px){
+ body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+ .mobile-bottom{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));padding:7px max(5px,env(safe-area-inset-left)) calc(7px + env(safe-area-inset-bottom)) max(5px,env(safe-area-inset-right));height:calc(70px + env(safe-area-inset-bottom));background:rgba(255,255,255,.98)!important;border-top:1px solid #e4ede7;box-shadow:0 -8px 32px rgba(12,70,42,.09);backdrop-filter:blur(20px);z-index:50}
+ .mobile-bottom button{position:relative;min-width:0;min-height:50px;border:0;border-radius:14px;background:transparent!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:5px 0;font-size:10px;font-weight:700;color:#77877d;transition:color .18s ease,background .18s ease}
+ .mobile-bottom button svg{display:block;width:22px;height:22px;flex:0 0 auto;stroke-width:1.8}
+ .mobile-bottom button span{display:block;white-space:nowrap;font-size:10px;line-height:1.2}
+ .mobile-bottom button.active{color:var(--fresh-green);background:#e9f8ee!important}
+ .mobile-bottom button.active::before{content:'';position:absolute;top:-7px;width:22px;height:3px;border-radius:3px;background:var(--fresh-green)}
+ .mobile-bottom button:active{transform:scale(.96)}
+ .sidebar{top:0!important;bottom:0!important;height:100dvh!important;z-index:65!important;width:min(310px,85vw)!important;padding-top:32px!important;box-shadow:14px 0 40px rgba(0,0,0,.14)}
+ .sidebar-backdrop:not([hidden]){display:block;position:fixed;inset:0;z-index:64;background:rgba(5,35,22,.52);backdrop-filter:blur(2px)}
+ .sidebar nav button{min-height:45px;font-size:13px}
+ .dashboard-main{border:0;background:transparent;padding-bottom:28px}
+ .wa-float{bottom:calc(84px + env(safe-area-inset-bottom));z-index:46}
+ .toast{bottom:calc(90px + env(safe-area-inset-bottom))}
+}
+@media(max-width:760px){
+ html{scroll-padding-top:104px}
+ body{background:var(--fresh-bg)}
+ body::before{background-image:linear-gradient(180deg,rgba(246,250,247,.91),rgba(246,250,247,.94)),var(--sawah-page-bg);background-attachment:fixed}
+ .topbar{min-height:65px;padding:10px 15px;padding-top:calc(9px + env(safe-area-inset-top));background:linear-gradient(110deg,#075c39,#0d8952)!important;color:#fff;border:0;box-shadow:0 8px 20px rgba(5,79,43,.12);gap:9px}
+ .brand{gap:9px;min-width:0}
+ .brand-mark{width:37px;height:37px;border-radius:12px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.22);font-size:21px;flex-shrink:0}
+ .brand strong{font-size:14px;font-weight:850;color:#fff;line-height:1.12;white-space:normal;max-width:185px;letter-spacing:-.02em}
+ .brand small{display:block;color:#d8f7e4;font-size:9px;line-height:1.25;margin-top:3px;max-width:200px}
+ .header-actions{align-items:center;flex-shrink:0;gap:5px}
+ .flyer-download-header{background:#fff!important;color:#086e42!important;box-shadow:0 5px 14px rgba(0,0,0,.10);border:0;min-height:38px!important;border-radius:11px!important;padding:8px 10px!important;gap:5px!important}
+ .flyer-download-header .flyer-download-label{display:inline!important;font-size:11px!important;font-weight:900}
+ .flyer-download-header .flyer-download-icon{font-size:18px!important}
+ .flyer-download-header .flyer-pdf-tag{border-color:rgba(8,106,64,.24);color:#087342}
+ #loginBtn,#logoutBtn{color:white;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.28);padding:10px!important;min-height:38px;border-radius:11px;font-size:11px!important}
+ #cloudStatus,#installBtn{display:none!important}
+ .mobile-storefront-strip{display:flex;flex-direction:column;gap:8px;padding:12px 16px 13px;background:linear-gradient(180deg,#0d8952 0%,#117f50 100%);color:white}
+ .mobile-search-trigger{height:44px;border:0;border-radius:12px;width:100%;background:#fff;color:#657a6c;display:flex;align-items:center;gap:10px;padding:0 11px 0 13px;text-align:left;box-shadow:0 5px 16px rgba(1,64,31,.12)}
+ .mobile-search-trigger>span:first-of-type{flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .mobile-search-trigger svg{width:18px;height:18px;color:var(--fresh-green)}
+ .search-shortcut{font-weight:800;color:var(--fresh-green);font-size:11px;border-left:1px solid #e1eee4;padding-left:10px}
+ .mobile-trust-note{display:flex;align-items:center;gap:5px;color:#e3faeb;font-size:10px;font-weight:650;letter-spacing:.01em}
+ .mobile-trust-note svg{height:13px;width:13px}
+ .hero,.hero.has-photo-bg{display:flex;flex-direction:column;gap:0;margin:12px 12px 0;padding:0!important;border:1px solid rgba(14,103,54,.11);border-radius:22px;overflow:hidden;box-shadow:0 8px 28px rgba(29,78,45,.08);background:#fff!important}
+ .hero .hero-card,.hero.has-photo-bg .hero-card{order:0;margin:0;padding:0!important;border:0!important;border-radius:0;background:#fff!important;box-shadow:none;backdrop-filter:none!important;width:100%}
+ .hero .hybrid-photo-visual{border:0;border-radius:0;min-height:0;height:auto;aspect-ratio:1.48;background:#e6f1e9}
+ .hero .hybrid-photo-visual img{width:100%;height:100%;min-height:0;object-fit:cover;object-position:center}
+ .hero .hybrid-photo-caption{left:12px;right:12px;bottom:11px;padding:10px 12px;border-radius:11px;background:linear-gradient(90deg,rgba(6,45,26,.94),rgba(9,75,42,.83))}
+ .hero .hybrid-photo-caption b{font-size:14px}.hero .hybrid-photo-caption span{font-size:10px}
+ .hero .hero-card>.muted{display:none}
+ .hero .hero-copy,.hero.has-photo-bg .hero-copy{order:1;border:0;border-radius:0;padding:18px 18px 17px!important;margin:0!important;background:#fff!important;box-shadow:none!important;backdrop-filter:none}
+ .hero .eyebrow{display:inline-flex;align-items:center;color:#0a7848;letter-spacing:.055em;text-transform:none;background:#e9f8ef;border-radius:999px;padding:6px 10px;font-size:10px}
+ .hero h1{font-size:clamp(24px,7vw,33px);line-height:1.16;letter-spacing:-.042em;margin:11px 0 8px;max-width:none;color:#123f29}
+ .hero p{font-size:12px;line-height:1.6;color:#5f7366;margin:0}
+ .hero-actions{display:grid;grid-template-columns:1.06fr .94fr;gap:8px;margin-top:14px}
+ .hero-actions button{min-width:0;min-height:43px;border-radius:12px;padding:10px 8px;font-size:11px;line-height:1.2}
+ .hero-actions .primary{background:linear-gradient(120deg,#07834b,#0a7045);box-shadow:0 5px 13px rgba(11,118,67,.16)}
+ .hero-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:16px 0 0;max-width:none}
+ .hero-stats div,.hero.has-photo-bg .hero-stats div{padding:10px 5px;border-radius:12px;background:#f4f9f5!important;border:1px solid #e8f0e9;box-shadow:none;min-width:0;text-align:center}
+ .hero-stats b{font-size:20px;line-height:1.2;color:#0a7646}.hero-stats span{display:block;font-size:10px;line-height:1.25;color:#476653;margin-top:3px}.hero-stats small{display:none}
+ .mobile-quick-access{display:block;background:#fff;border:1px solid #e5eee8;margin:12px 12px 0;border-radius:20px;padding:16px 10px 12px;box-shadow:0 5px 20px rgba(22,74,40,.045)}
+ .mobile-quick-header{display:flex;justify-content:space-between;align-items:baseline;gap:9px;padding:0 6px 11px}.mobile-quick-header b{font-size:14px;color:#153e2b}.mobile-quick-header span{font-size:10px;color:#809087;text-align:right}
+ .mobile-quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+ .mobile-quick-grid button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:74px;padding:5px 1px;color:#284d37;font-weight:700;font-size:10px;line-height:1.25}
+ .quick-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:15px;background:#edf7f0;color:#13834b;box-shadow:inset 0 0 0 1px #e1efe5}
+ .mobile-quick-grid button:nth-child(2) .quick-icon{background:#fef3e8;color:#cb8334;box-shadow:inset 0 0 0 1px #f8e6d1}
+ .mobile-quick-grid button:nth-child(3) .quick-icon{background:#ebf2fc;color:#437dbb;box-shadow:inset 0 0 0 1px #dfebfa}
+ .mobile-quick-grid button:nth-child(4) .quick-icon{background:#f4effe;color:#8a67c3;box-shadow:inset 0 0 0 1px #e9dff9}
+ .quick-icon svg{width:21px;height:21px}
+ .section,.section.alt{padding:26px 12px!important;border:0!important;background:transparent!important;max-width:100%;margin:0}
+ .section h2{font-size:22px;line-height:1.18;letter-spacing:-.035em;margin:5px 0 10px;color:#153e2b}
+ .section .eyebrow{font-size:10px;letter-spacing:.06em;text-transform:none;color:#15814e}
+ .section-head{flex-direction:column;align-items:stretch;gap:13px;margin:0 0 14px}
+ .search,.filter-row select,.inline-form input,.form-stack input,.form-stack select,.dash-form input,.dash-form select,.dash-form textarea{min-height:45px;border-radius:12px;font-size:14px}
+ .search{max-width:none;box-shadow:0 2px 10px rgba(0,0,0,.025)}
+ .card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .product-card{border:1px solid #e4ebe6;border-radius:16px!important;overflow:hidden;box-shadow:0 4px 15px rgba(33,65,41,.055);background:#fff!important;backdrop-filter:none!important}
+ .product-thumb{height:auto;aspect-ratio:1.2;min-height:118px;font-size:40px}
+ .product-body{padding:11px 10px 13px}
+ .product-body .eyebrow{font-size:9px;letter-spacing:0}
+ .product-body h3{font-size:13px;line-height:1.28;margin:5px 0 6px;min-height:33px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .product-body .tags{margin:6px 0}.product-body .tag{font-size:9px;padding:5px 7px}
+ .product-body p{font-size:10px;line-height:1.45;margin:5px 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ .product-card .card-more{font-size:9px;padding-top:9px;margin-top:10px;align-items:flex-start}
+ .filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.filter-row select{min-width:0;font-size:12px;padding:9px 11px}
+ .map-shell{grid-template-columns:minmax(0,1fr);gap:13px}
+ .map-placeholder{min-height:250px;border-radius:18px}
+ .map-label{font-size:11px}
+ .cpcl-list{max-height:none;overflow:visible}
+ .cpcl-card,.house-card,.warranty-public,.panel{border-radius:17px!important;box-shadow:0 5px 18px rgba(25,72,41,.05);border-color:#e4ece5!important}
+ .cpcl-card{padding:14px}
+ .house-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+ .house-card{padding:11px}.house-card h3{font-size:16px;margin:13px 4px 6px}.house-card p{font-size:12px;margin:4px}
+ .house-photo,.house-illustration{height:190px}
+ .spec-strip{gap:7px}.spec-strip span{font-size:10px;padding:8px 10px;background:#eaf6ee}
+ .warranty-public{padding:20px 15px!important}
+ .warranty-public p{font-size:12px;line-height:1.55}
+ .inline-form{display:grid;gap:9px}.inline-form button{min-height:46px}
+ .auth-view,.detail-view{padding:8px 8px calc(10px + env(safe-area-inset-bottom));align-items:end}
+ .auth-card,.detail-card{max-height:min(89dvh,820px);width:100%;border-radius:23px 23px 14px 14px;padding:24px 17px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -14px 45px rgba(5,38,22,.18)}
+ .auth-tabs{padding-right:19px}.auth-tabs .tab{font-size:12px;min-height:43px;flex:1}
+ .form-stack,.dash-form{gap:12px}.form-stack label,.dash-form label{font-size:12px}
+ .form-stack input,.form-stack select{font-size:16px}
+ .form-stack button.primary{min-height:46px}
+ .site-footer{margin-bottom:0;padding:27px 18px calc(26px + env(safe-area-inset-bottom));font-size:12px}
+ .footer-brand strong{font-size:15px}.footer-brand span{font-size:11px}
+ .footer-contact{gap:9px}.footer-wa-link{min-height:44px}
+ .dashboard-main{padding:17px 12px 24px}
+ .dashboard-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}.dashboard-header h1{font-size:24px;line-height:1.18}
+ #toggleSidebar{display:inline-flex;flex-shrink:0;padding:9px 11px;min-height:43px;font-size:11px}
+ .kpi-grid{gap:8px}.kpi{border-radius:14px;padding:13px}.kpi b{font-size:25px}
+ .grid-2{gap:12px}.panel{padding:16px;margin-top:12px}
+ .data-table th,.data-table td{font-size:11px}
+ .table-wrap{max-width:100%;overscroll-behavior-x:contain}
+ .hybrid-save-bar{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+ .wa-float{right:12px;padding:11px;height:47px;width:47px;border-radius:16px}
+ .wa-float .wa-icon{width:24px;height:24px}
+}
+@media(max-width:390px){
+ .topbar{padding-left:10px;padding-right:10px;gap:5px}
+ .brand-mark{width:31px;height:33px;font-size:18px}
+ .brand strong{font-size:11.4px;max-width:121px}
+ .brand small{font-size:8px;max-width:125px}
+ .header-actions{gap:4px}
+ .flyer-download-header{padding:7px 7px!important;min-height:36px!important}
+ .flyer-download-header .flyer-download-label{font-size:10px!important}
+ .flyer-download-header .flyer-pdf-tag{display:none}
+ #loginBtn,#logoutBtn{padding:8px!important;min-height:36px}
+ .hero .hero-copy,.hero.has-photo-bg .hero-copy{padding:15px 13px!important}
+ .hero h1{font-size:24px}
+ .hero-actions button{font-size:10px}
+ .mobile-quick-access{padding-left:7px;padding-right:7px}
+ .mobile-quick-grid button{font-size:9px}
+ .quick-icon{width:39px;height:39px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.mobile-bottom button,.flyer-download,.wa-float{transition:none!important}}
+
+@media(max-width:360px){
+ .topbar{padding-left:8px;padding-right:8px;gap:4px}
+ .brand{gap:5px}.brand strong{max-width:106px;font-size:10.5px}.brand small{display:none}
+ .flyer-download-header{padding:7px 6px!important;gap:3px!important}
+ .flyer-download-header .flyer-download-label{font-size:9.5px!important}
+ #loginBtn,#logoutBtn{padding:7px!important;font-size:10px!important}
+}

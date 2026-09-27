@@ -619,14 +619,56 @@ async function login(email,password){
   return toast('Layanan masuk sedang tidak tersedia. Silakan coba lagi.');
 }
 
+
+const MOBILE_ICONS = {
+  home:`<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>`, products:`<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`, pin:`<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>`, shield:`<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 22 0 0C7.5 20.5 4 16.5 4 12V5l8-3 8 3v7c0 4.5-3.5 8.5-8 10Z"/><path d="m9 12 2 2 4-4"/></svg>`, user:`<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>`, claim:`<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v15a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V5a2 2 0 0 0-2-2h-3"/><path d="M9 3a3 3 0 0 1 6 0v2H9zM8 12h8m-8 4h6"/></svg>`, menu:`<svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`
+};
+function setSidebarOpen(open){
+  const side=$('.sidebar'),backdrop=$('#sidebarBackdrop');
+  if(!side||!backdrop)return;
+  side.classList.toggle('open',!!open);
+  backdrop.hidden=!open;
+}
+function syncMobileNavigation(){
+  const nav=$('#mobileBottom'),u=currentUser(),dashboard=!$('#dashboardView').hidden&&!!u;
+  if(!nav)return;
+  const options=dashboard ? (u.role==='admin'
+    ? [['home','Ringkasan','home'],['beneficiaries','CPCL','pin'],['products','Produk','products'],['warranty','Garansi','shield'],['menu','Menu','menu']]
+    : [['home','Ringkasan','home'],['asset','Unit','products'],['warranty','Garansi','shield'],['claim','Klaim','claim'],['menu','Menu','menu']])
+    : [['home','Beranda','home'],['products','Produk','products'],['cpcl','CPCL','pin'],['warranty','Garansi','shield'],['account','Akun','user']];
+  nav.dataset.mode=dashboard?'dashboard':'public';
+  const searchStrip=$('.mobile-storefront-strip');if(searchStrip)searchStrip.hidden=dashboard;
+  nav.innerHTML=options.map(([id,label,icon])=>`<button type="button" data-mobile-target="${id}">${MOBILE_ICONS[icon]}<span>${label}</span></button>`).join('');
+  highlightMobileNavigation(dashboard?(currentDashPage||'home'):'home');
+}
+function highlightMobileNavigation(target){
+  const nav=$('#mobileBottom');if(!nav)return;
+  [...nav.querySelectorAll('[data-mobile-target]')].forEach(btn=>{
+    const on=btn.dataset.mobileTarget===target;
+    btn.classList.toggle('active',on);
+    if(on)btn.setAttribute('aria-current','page');else btn.removeAttribute('aria-current');
+  });
+}
+function mobileNavigationAction(target){
+  if($('#mobileBottom')?.dataset.mode==='dashboard'){
+    if(target==='menu'){setSidebarOpen(!$('.sidebar')?.classList.contains('open'));return}
+    navigateDash(target);window.scrollTo({top:0,behavior:'smooth'});return;
+  }
+  if(target==='account'){currentUser()?showDashboard():openAuth('login');return}
+  const id={home:'#publicView',products:'#produk',cpcl:'#cpcl',warranty:'#garansi'}[target];
+  if(target==='home'){highlightMobileNavigation(target);window.scrollTo({top:0,behavior:'smooth'});return}
+  const el=id&&document.querySelector(id);
+  if(el){highlightMobileNavigation(target);el.scrollIntoView({behavior:'smooth',block:'start'})}
+}
+
 function showDashboard(){
   const u=currentUser();if(!u){openAuth('login');return} document.body.style.overflow='';
-  $('#publicView').hidden=true;$('#authView').hidden=true;$('#dashboardView').hidden=false;$('#loginBtn').hidden=true;$('#logoutBtn').hidden=false;$('#mobileBottom').style.display='none';
+  $('#publicView').hidden=true;$('#authView').hidden=true;$('#dashboardView').hidden=false;$('#loginBtn').hidden=true;$('#logoutBtn').hidden=false;setSidebarOpen(false);syncMobileNavigation();
   $('#roleChip').textContent=u.role.toUpperCase();$('#dashName').textContent=u.name;$('#dashWelcome').textContent=`Selamat datang, ${u.name}`;buildDashNav(u.role);navigateDash('home');
 }
 function logout(writeAudit=true){
   if(writeAudit && currentUser())audit('LOGOUT','Keluar dashboard');sessionStorage.removeItem(SESSION);if(firebaseAuth?.currentUser)firebaseAuth.signOut().catch(()=>{});document.body.style.overflow='';
-  $('#authView').hidden=true;$('#dashboardView').hidden=true;$('#publicView').hidden=false;$('#loginBtn').hidden=false;$('#logoutBtn').hidden=true;$('#mobileBottom').style.display='';renderPublic();
+  $('#authView').hidden=true;$('#dashboardView').hidden=true;$('#publicView').hidden=false;$('#loginBtn').hidden=false;$('#logoutBtn').hidden=true;setSidebarOpen(false);syncMobileNavigation();renderPublic();
 }
 
 const adminMenus=[['home','Ringkasan','🏠'],['hybridcard','Kartu Pompa Hybrid','🚜'],['houses','Rumah Pompa','🏠'],['beneficiaries','CPCL & Penerima','📍'],['products','Produk','⚙️'],['warranty','Garansi & Klaim','🛡️'],['users','User','👥'],['settings','Website & Data','🖥️'],['audit','Aktivitas','🧾']];
@@ -634,7 +676,7 @@ const userMenus=[['home','Ringkasan','🏠'],['asset','Unit Bantuan','⚙️'],[
 function buildDashNav(role){const menus=role==='admin'?adminMenus:userMenus;$('#dashNav').innerHTML=menus.map(m=>`<button data-dash="${m[0]}">${m[2]} ${m[1]}</button>`).join('');$$('[data-dash]').forEach(b=>b.onclick=()=>navigateDash(b.dataset.dash));}
 function navigateDash(page){
   const u=currentUser();if(!u)return;currentDashPage=page;$$('[data-dash]').forEach(b=>b.classList.toggle('active',b.dataset.dash===page));
-  const label=(u.role==='admin'?adminMenus:userMenus).find(x=>x[0]===page)?.[1]||'Dashboard';$('#dashTitle').textContent=label;$('#dashContent').innerHTML=u.role==='admin'?adminPage(page):userPage(page,u);bindDashActions(page,u);$('.sidebar')?.classList.remove('open');
+  const label=(u.role==='admin'?adminMenus:userMenus).find(x=>x[0]===page)?.[1]||'Dashboard';$('#dashTitle').textContent=label;$('#dashContent').innerHTML=u.role==='admin'?adminPage(page):userPage(page,u);bindDashActions(page,u);setSidebarOpen(false);highlightMobileNavigation(page);
 }
 
 function adminPage(page){
@@ -1069,7 +1111,7 @@ async function registerBeneficiary(form){
 }
 
 function bind(){
-  $('#loginBtn').onclick=()=>openAuth('login');$('#mobileAccount').onclick=()=>currentUser()?showDashboard():openAuth('login');$('#logoutBtn').onclick=()=>logout(true);$('#closeAuth').onclick=closeAuth;$('#authView').addEventListener('click',e=>{if(e.target===$('#authView'))closeAuth()});
+  $('#loginBtn').onclick=()=>openAuth('login');$('#logoutBtn').onclick=()=>logout(true);$('#closeAuth').onclick=closeAuth;$('#authView').addEventListener('click',e=>{if(e.target===$('#authView'))closeAuth()});
   $('#closeDetail').onclick=closeDetail;$('#detailView').addEventListener('click',e=>{if(e.target===$('#detailView'))closeDetail()});
   document.addEventListener('click',e=>{
     const map=e.target.closest('[data-detail-map]');if(map){const [lat,lng]=map.dataset.detailMap.split(',');window.open(`https://www.google.com/maps?q=${lat},${lng}`,'_blank');return}
@@ -1081,11 +1123,11 @@ function bind(){
   });
   document.addEventListener('keydown',e=>{if(!['Enter',' '].includes(e.key))return;if(e.target.matches('input,select,textarea,button,a'))return;const el=e.target.closest('[data-product-id],[data-cpcl-id],[data-house],[data-summary]');if(!el)return;e.preventDefault();if(el.dataset.productId)openProductDetail(el.dataset.productId);else if(el.dataset.cpclId)openCPCLDetail(el.dataset.cpclId);else if(el.dataset.house)openHouseDetail(el.dataset.house);else if(el.dataset.summary)openSummaryDetail(el.dataset.summary)});
   $$('.auth-tabs .tab').forEach(b=>b.onclick=()=>switchAuthTab(b.dataset.authTab));$('#loginForm').onsubmit=e=>{e.preventDefault();login($('#loginEmail').value,$('#loginPassword').value)};const rp=$('#regProvince');if(rp)rp.innerHTML='<option value="">Pilih Provinsi</option>'+provinceOptions();$('#registerForm').onsubmit=e=>{e.preventDefault();registerBeneficiary(e.target)};
-  $('#productSearch').oninput=renderProducts;$('#provinceFilter').onchange=renderCPCL;$('#statusFilter').onchange=renderCPCL;$$('[data-scroll]').forEach(b=>b.onclick=()=>{closeAuth();document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:'smooth'})});$('#toggleSidebar').onclick=()=>$('.sidebar').classList.toggle('open');
+  $('#productSearch').oninput=renderProducts;$('#provinceFilter').onchange=renderCPCL;$('#statusFilter').onchange=renderCPCL;$$('[data-scroll]').forEach(b=>b.onclick=()=>{closeAuth();document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:'smooth'})});$('#toggleSidebar').onclick=()=>setSidebarOpen(!$('.sidebar')?.classList.contains('open'));$('#sidebarBackdrop').onclick=()=>setSidebarOpen(false);$('#mobileBottom').addEventListener('click',e=>{const b=e.target.closest('[data-mobile-target]');if(b)mobileNavigationAction(b.dataset.mobileTarget)});$('#mobileSearchTrigger').onclick=()=>{document.querySelector('#produk')?.scrollIntoView({behavior:'smooth'});setTimeout(()=>$('#productSearch')?.focus({preventScroll:true}),430)};
   $('#warrantyCheckForm').onsubmit=e=>{e.preventDefault();const code=$('#warrantyCodeCheck').value.trim().toUpperCase(),db=getDB(),b=db.beneficiaries.find(x=>String(x.warrantyCode||'').toUpperCase()===code),out=$('#warrantyCheckResult');if(!b){out.innerHTML='<div class="result-card warn"><b>Kode tidak ditemukan</b><p>Periksa kembali kode atau hubungi admin proyek.</p></div>';return}const w=warrantyStatus(b);out.innerHTML=`<div class="result-card ${w.cls}"><b>${w.label}</b><p>${esc(b.name)} • ${esc(b.group)}<br>${esc(b.asset)} • ${esc(b.serial||'No. seri belum diisi')}<br>Mulai: ${fmtDate(b.warrantyStart)} ${w.end?`• Berakhir: ${w.end.toLocaleDateString('id-ID')}`:''}</p></div>`};
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('#installBtn').hidden=false});
 $('#installBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('#installBtn').hidden=true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=27',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=28',{updateViaCache:'none'}).catch(()=>{}));
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#detailView').hidden)closeDetail();else if(!$('#authView').hidden)closeAuth()}});
-bind();renderPublic();initFirebaseOnline();if(currentUser())showDashboard();
+bind();renderPublic();syncMobileNavigation();initFirebaseOnline();if(currentUser())showDashboard();

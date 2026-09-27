@@ -3,8 +3,8 @@
   "short_name": "LMS",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#fbfcfa",
-  "theme_color": "#0f6b3b",
+  "background_color": "#f4f8f5",
+  "theme_color": "#087a4a",
   "description": "Informasi pompa irigasi hybrid, CPCL, bantuan, dan layanan garansi.",
   "icons": [
     {

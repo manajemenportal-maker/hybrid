@@ -27,3 +27,6 @@ Status koneksi dan pesan kegagalan layanan tetap ditampilkan bila terjadi ganggu
 
 ## Pembaruan v27
 Hanya satu tombol unduh flyer di navigasi atas. Banner unduh tambahan dan tautan flyer di hero sudah dihapus. Untuk menampilkan perubahan di GitHub Pages, unggah ulang seluruh isi ZIP ke lokasi sumber Pages yang sama, lalu pastikan commit/deployment berhasil. File PDF berada sejajar dengan `index.html`, bukan di subfolder. Jangan hapus data Firestore untuk memperbarui tampilan.
+
+## Tampilan mobile v28
+Tampilan mobile-first bergaya etalase aplikasi: header dan pencarian ringkas, foto pompa sebagai hero, akses cepat empat layanan, katalog dua kolom, navigasi bawah lima menu aktif pada halaman publik maupun dashboard, panel login seperti bottom sheet, tombol WA aman dari navigasi bawah, PDF flyer satu pintu di header. Tidak menggunakan aset atau identitas Shopee. Cache PWA v28.
