@@ -123,6 +123,57 @@ function provinceOptions(selected=''){
 }
 
 
+const HYBRID_DETAIL_SECTIONS = [
+  {key:'detailPumpSize',label:'Ukuran Pompa'},
+  {key:'detailSystem',label:'Sistem Penggerak'},
+  {key:'detailDiesel',label:'Mode Diesel'},
+  {key:'detailElectric',label:'Mode Listrik'},
+  {key:'detailTransfer',label:'Perpindahan Penggerak'},
+  {key:'detailSafety',label:'Keselamatan'},
+  {key:'detailMaintenance',label:'Perawatan'}
+];
+const HYBRID_GALLERY_LIMIT=5;
+const HYBRID_GALLERY_MAX_FILE=5*1024*1024;
+function normalizeHybridGallery(value){
+  const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+  return Object.fromEntries(HYBRID_DETAIL_SECTIONS.map(({key})=>[
+    key, (Array.isArray(source[key])?source[key]:[])
+      .filter(x=>x&&typeof x.url==='string'&&/^https:\/\//i.test(x.url))
+      .slice(0,HYBRID_GALLERY_LIMIT)
+      .map(x=>({url:String(x.url),caption:String(x.caption||'').slice(0,220)}))
+  ]));
+}
+function hybridGalleryEditorMarkup(key,label,photos=[],pending=[]){
+  const count=photos.length+pending.length,remaining=HYBRID_GALLERY_LIMIT-count;
+  return `<details class="hybrid-gallery-editor" data-gallery-block="${esc(key)}">
+    <summary><span class="gallery-summary-icon">▧</span><span>Foto ${esc(label)} <small>Penjelasan visual tiap komponen</small></span><b class="gallery-count">${count}/${HYBRID_GALLERY_LIMIT}</b></summary>
+    <div class="gallery-editor-content">
+      <p class="muted">Tambahkan hingga 5 foto dan keterangan fungsi. Foto muncul saat pengunjung membuka detail kartu.</p>
+      <div class="gallery-editor-items">${photos.map((photo,i)=>`<div class="gallery-edit-item"><img src="${esc(photo.url)}" alt="Foto ${esc(label)} ${i+1}" loading="lazy"><div><label>Keterangan foto ${i+1}<textarea data-gallery-caption="${esc(key)}" data-photo-index="${i}" maxlength="220" rows="2" placeholder="Jelaskan posisi atau fungsi komponen">${esc(photo.caption)}</textarea></label><button type="button" class="gallery-remove" data-gallery-remove="${esc(key)}" data-photo-index="${i}">Hapus foto</button></div></div>`).join('')}
+      ${pending.map((photo,i)=>`<div class="gallery-edit-item pending"><img src="${esc(photo.previewUrl)}" alt="Foto baru ${esc(label)} ${i+1}"><div><span class="gallery-pending-chip">Siap diunggah saat Simpan</span><label>Keterangan foto baru ${i+1}<textarea data-gallery-new-caption="${esc(key)}" data-photo-index="${i}" maxlength="220" rows="2" placeholder="Jelaskan posisi atau fungsi komponen">${esc(photo.caption)}</textarea></label><button type="button" class="gallery-remove" data-gallery-remove-pending="${esc(key)}" data-photo-index="${i}">Batalkan foto</button></div></div>`).join('')}
+      ${!count?'<div class="gallery-empty">Belum ada foto untuk item ini.</div>':''}</div>
+      <label class="gallery-upload-label">＋ Pilih foto (bisa beberapa sekaligus)<input type="file" accept="image/*" multiple data-gallery-upload="${esc(key)}" ${remaining?'':'disabled'}></label>
+      <small class="muted">Sisa ${remaining} foto • maksimum 5 MB per foto • JPEG, PNG, WebP atau GIF.</small>
+    </div>
+  </details>`;
+}
+async function uploadHybridGalleryPhoto(file,key){
+  if(!firebaseAuth?.currentUser||!firebaseStorage||!cloudReady) throw new Error('Layanan unggah foto belum tersambung. Masuk kembali dan periksa koneksi.');
+  if(!file||!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) throw new Error('Gunakan foto JPEG, PNG, WebP, atau GIF.');
+  if(file.size>=HYBRID_GALLERY_MAX_FILE||!file.size) throw new Error('Setiap foto maksimal 5 MB.');
+  const filename=(file.name||'foto.jpg').replace(/[^a-z0-9._-]/gi,'-').slice(-70);
+  const ref=firebaseStorage.ref(`uploads/${firebaseAuth.currentUser.uid}/hybrid-detail/${key}/${Date.now()}-${Math.random().toString(36).slice(2,10)}-${filename}`);
+  await ref.put(file,{contentType:file.type});
+  return {url:await ref.getDownloadURL(),path:ref.fullPath};
+}
+async function deleteOwnHybridGalleryPhoto(url){
+  if(!firebaseStorage||!firebaseAuth?.currentUser||!/^https:\/\//.test(url))return;
+  try{
+    const ref=firebaseStorage.refFromURL(url);
+    if(ref.fullPath.startsWith(`uploads/${firebaseAuth.currentUser.uid}/hybrid-detail/`))await ref.delete();
+  }catch(err){console.warn('Penghapusan foto dari Storage tertunda',err)}
+}
+
 const DEFAULT_HYBRID_CARD = {
   visible:true,
   pumpLabel:'POMPA',
@@ -146,7 +197,8 @@ const DEFAULT_HYBRID_CARD = {
   detailElectric:'Motor listrik 3-phase digunakan ketika sumber listrik tersedia dan instalasi memenuhi persyaratan operasi.',
   detailTransfer:'Perpindahan penggerak dilakukan bergantian. Mekanisme transmisi harus mencegah kedua penggerak saling memaksa.',
   detailSafety:'Komponen berputar wajib dilengkapi guard, panel tetap kering, dan sumber energi diisolasi sebelum pekerjaan servis.',
-  detailMaintenance:'Periksa pompa, alignment/coupling, bearing, seal, motor, diesel, panel, dan sambungan pipa secara berkala.'
+  detailMaintenance:'Periksa pompa, alignment/coupling, bearing, seal, motor, diesel, panel, dan sambungan pipa secara berkala.',
+  detailGallery:normalizeHybridGallery()
 };
 
 
@@ -234,6 +286,7 @@ function normalizeDB(db){
   const out = clone(seed);
   if(!db || typeof db!=='object') return out;
   out.settings = {...out.settings,...(db.settings||{}),hybridCard:{...DEFAULT_HYBRID_CARD,...(db.settings?.hybridCard||{})}};
+  out.settings.hybridCard.detailGallery=normalizeHybridGallery(out.settings.hybridCard.detailGallery);
   const incomingHouses=db.settings?.houseCards||{};
   out.settings.houseCards={};
   ['open','semi','secure'].forEach(type=>{out.settings.houseCards[type]={...DEFAULT_HOUSE_CARDS[type],...(incomingHouses[type]||{})};});
@@ -314,7 +367,7 @@ function slug(s){return (s||'').toLowerCase().replace(/\s+/g,'-')}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function safeUrl(url){ const v=String(url||'').trim(); return /^(https?:\/\/|data:image\/|assets\/|\.\/|\.\.\/)/i.test(v)?v:''; }
 function safeColor(value,fallback){ const v=String(value||'').trim(); return /^#[0-9a-f]{6}$/i.test(v)?v:fallback; }
-function hybridCardSettings(db=getDB()){ return {...DEFAULT_HYBRID_CARD,...(db.settings?.hybridCard||{})}; }
+function hybridCardSettings(db=getDB()){ const c={...DEFAULT_HYBRID_CARD,...(db.settings?.hybridCard||{})};c.detailGallery=normalizeHybridGallery(c.detailGallery);return c; }
 function hybridVisualMarkup(c){
   const core=safeColor(c.coreColor,DEFAULT_HYBRID_CARD.coreColor), diesel=safeColor(c.dieselColor,DEFAULT_HYBRID_CARD.dieselColor), electric=safeColor(c.electricColor,DEFAULT_HYBRID_CARD.electricColor);
   const img=safeUrl(c.image);
@@ -328,10 +381,14 @@ function renderHybridHero(){
   const c=hybridCardSettings(); card.hidden=!c.visible;
   card.innerHTML=`${hybridVisualMarkup(c)}<p class="muted">${esc(c.note)}</p>`;
 }
-function hybridDetailMarkup(c){
-  return `${detailBoxes([
-    ['Ukuran pompa',c.detailPumpSize],['Sistem penggerak',c.detailSystem],['Mode diesel',c.detailDiesel],['Mode listrik',c.detailElectric],['Perpindahan penggerak',c.detailTransfer],['Keselamatan',c.detailSafety],['Perawatan',c.detailMaintenance]
-  ])}<div class="detail-note">Konfigurasi kartu saat ini: ${esc(c.dieselLabel)} ${esc(c.dieselPower)} ${esc(c.shaftSymbol)} ${esc(c.electricLabel)} ${esc(c.electricPower)}.</div>`;
+function hybridDetailMarkup(c,preview=false){
+  const gallery=normalizeHybridGallery(c.detailGallery);
+  if(preview){HYBRID_DETAIL_SECTIONS.forEach(({key})=>{gallery[key]=[...gallery[key],...(c.detailGallery?.[key]||[]).filter(x=>typeof x.url==='string'&&x.url.startsWith('blob:')).map(x=>({url:x.url,caption:String(x.caption||'').slice(0,220)}))].slice(0,HYBRID_GALLERY_LIMIT)})}
+  const sections=HYBRID_DETAIL_SECTIONS.map(({key,label})=>{
+    const items=gallery[key]||[];
+    return `<section class="hybrid-detail-section"><h4>${esc(label)}</h4><p>${esc(c[key]||'')}</p>${items.length?`<div class="hybrid-public-gallery">${items.map((photo,i)=>`<figure><a href="${esc(photo.url)}" target="_blank" rel="noopener noreferrer" aria-label="Perbesar foto ${esc(label)} ${i+1}"><img src="${esc(photo.url)}" loading="lazy" alt="${esc(photo.caption||`${label} foto ${i+1}`)}"></a><figcaption>${esc(photo.caption||`${label} — foto ${i+1}`)}</figcaption></figure>`).join('')}</div>`:''}</section>`;
+  }).join('');
+  return `<div class="hybrid-detail-sections">${sections}</div><div class="detail-note">Konfigurasi kartu saat ini: ${esc(c.dieselLabel)} ${esc(c.dieselPower)} ${esc(c.shaftSymbol)} ${esc(c.electricLabel)} ${esc(c.electricPower)}.</div>`;
 }
 function currentUser(){
   const id=sessionStorage.getItem(SESSION); if(!id)return null;
@@ -704,10 +761,8 @@ function adminPage(page){
           ${c.image?`<div class="current-hybrid-image"><span>Gambar saat ini tersedia.</span><button type="button" class="danger" id="removeHybridImage">Hapus Gambar</button></div>`:''}
           <hr class="soft"><h3>Detail Saat Kartu Diklik</h3>
           <label>Judul Detail<input name="detailTitle" value="${esc(c.detailTitle)}"></label><label>Subjudul Detail<input name="detailSubtitle" value="${esc(c.detailSubtitle)}"></label>
-          <label>Ukuran Pompa<textarea name="detailPumpSize" rows="2">${esc(c.detailPumpSize)}</textarea></label><label>Sistem Penggerak<textarea name="detailSystem" rows="2">${esc(c.detailSystem)}</textarea></label>
-          <label>Mode Diesel<textarea name="detailDiesel" rows="2">${esc(c.detailDiesel)}</textarea></label><label>Mode Listrik<textarea name="detailElectric" rows="2">${esc(c.detailElectric)}</textarea></label>
-          <label>Perpindahan Penggerak<textarea name="detailTransfer" rows="2">${esc(c.detailTransfer)}</textarea></label><label>Keselamatan<textarea name="detailSafety" rows="2">${esc(c.detailSafety)}</textarea></label>
-          <label>Perawatan<textarea name="detailMaintenance" rows="2">${esc(c.detailMaintenance)}</textarea></label>
+          <p class="muted">Setiap topik dapat dilengkapi maksimal 5 foto beserta keterangan posisi dan fungsi komponennya.</p>
+          ${HYBRID_DETAIL_SECTIONS.map(({key,label})=>`<div class="hybrid-admin-section"><label>${esc(label)}<textarea name="${esc(key)}" rows="2">${esc(c[key])}</textarea></label>${hybridGalleryEditorMarkup(key,label,c.detailGallery[key])}</div>`).join('')}
           <div class="hybrid-save-bar"><div id="hybridSaveStatus" class="save-status" role="status" aria-live="polite"></div><div class="inline-actions"><button type="submit" class="primary" id="saveHybridCardBtn">Simpan Perubahan Online</button><button type="button" class="ghost" id="resetHybridCard">Pulihkan Tampilan Awal</button><button type="button" class="ghost" id="previewHybridDetail">Lihat Detail Kartu</button></div></div>
         </form>
       </div>
@@ -844,9 +899,50 @@ function bindDashActions(page,u){
   if(u.role==='admin'){
     const hybridForm=$('#hybridCardForm');
     if(hybridForm){
-      const readHybridForm=()=>{const f=new FormData(hybridForm),base=hybridCardSettings();return {...base,visible:f.get('visible')==='on',useImage:f.get('useImage')==='on',pumpLabel:String(f.get('pumpLabel')||'').trim(),pumpName:String(f.get('pumpName')||'').trim(),dieselLabel:String(f.get('dieselLabel')||'').trim(),dieselPower:String(f.get('dieselPower')||'').trim(),electricLabel:String(f.get('electricLabel')||'').trim(),electricPower:String(f.get('electricPower')||'').trim(),shaftSymbol:String(f.get('shaftSymbol')||'').trim()||'⇄',note:String(f.get('note')||'').trim(),coreColor:safeColor(f.get('coreColor'),DEFAULT_HYBRID_CARD.coreColor),dieselColor:safeColor(f.get('dieselColor'),DEFAULT_HYBRID_CARD.dieselColor),electricColor:safeColor(f.get('electricColor'),DEFAULT_HYBRID_CARD.electricColor),image:String(f.get('image')||'').trim()||base.image,detailTitle:String(f.get('detailTitle')||'').trim(),detailSubtitle:String(f.get('detailSubtitle')||'').trim(),detailPumpSize:String(f.get('detailPumpSize')||'').trim(),detailSystem:String(f.get('detailSystem')||'').trim(),detailDiesel:String(f.get('detailDiesel')||'').trim(),detailElectric:String(f.get('detailElectric')||'').trim(),detailTransfer:String(f.get('detailTransfer')||'').trim(),detailSafety:String(f.get('detailSafety')||'').trim(),detailMaintenance:String(f.get('detailMaintenance')||'').trim()};};
+      const draftGallery=normalizeHybridGallery(hybridCardSettings().detailGallery);
+      const pendingGallery=Object.fromEntries(HYBRID_DETAIL_SECTIONS.map(({key})=>[key,[]]));
+      const readHybridForm=()=>{const f=new FormData(hybridForm),base=hybridCardSettings();return {...base,visible:f.get('visible')==='on',useImage:f.get('useImage')==='on',pumpLabel:String(f.get('pumpLabel')||'').trim(),pumpName:String(f.get('pumpName')||'').trim(),dieselLabel:String(f.get('dieselLabel')||'').trim(),dieselPower:String(f.get('dieselPower')||'').trim(),electricLabel:String(f.get('electricLabel')||'').trim(),electricPower:String(f.get('electricPower')||'').trim(),shaftSymbol:String(f.get('shaftSymbol')||'').trim()||'⇄',note:String(f.get('note')||'').trim(),coreColor:safeColor(f.get('coreColor'),DEFAULT_HYBRID_CARD.coreColor),dieselColor:safeColor(f.get('dieselColor'),DEFAULT_HYBRID_CARD.dieselColor),electricColor:safeColor(f.get('electricColor'),DEFAULT_HYBRID_CARD.electricColor),image:String(f.get('image')||'').trim()||base.image,detailTitle:String(f.get('detailTitle')||'').trim(),detailSubtitle:String(f.get('detailSubtitle')||'').trim(),detailPumpSize:String(f.get('detailPumpSize')||'').trim(),detailSystem:String(f.get('detailSystem')||'').trim(),detailDiesel:String(f.get('detailDiesel')||'').trim(),detailElectric:String(f.get('detailElectric')||'').trim(),detailTransfer:String(f.get('detailTransfer')||'').trim(),detailSafety:String(f.get('detailSafety')||'').trim(),detailMaintenance:String(f.get('detailMaintenance')||'').trim(),detailGallery:normalizeHybridGallery(draftGallery)};};
       const refreshHybridPreview=()=>{const c=readHybridForm(),box=$('#hybridAdminPreview');if(box)box.innerHTML=`<div class="hero-card">${hybridVisualMarkup(c)}<p class="muted">${esc(c.note)}</p></div>`;};
-      hybridForm.addEventListener('input',refreshHybridPreview);hybridForm.addEventListener('change',refreshHybridPreview);
+      const redrawGallery=(key)=>{
+        const original=hybridForm.querySelector(`[data-gallery-block="${key}"]`);
+        if(!original)return;
+        const expanded=original.open;
+        const label=HYBRID_DETAIL_SECTIONS.find(x=>x.key===key)?.label||key;
+        original.outerHTML=hybridGalleryEditorMarkup(key,label,draftGallery[key],pendingGallery[key]);
+        const updated=hybridForm.querySelector(`[data-gallery-block="${key}"]`);
+        if(updated)updated.open=expanded;
+      };
+      hybridForm.addEventListener('input',e=>{
+        const field=e.target;
+        if(field.matches('[data-gallery-caption]')){
+          const key=field.dataset.galleryCaption,index=Number(field.dataset.photoIndex);
+          if(draftGallery[key]?.[index])draftGallery[key][index].caption=field.value.slice(0,220);
+        }
+        if(field.matches('[data-gallery-new-caption]')){
+          const key=field.dataset.galleryNewCaption,index=Number(field.dataset.photoIndex);
+          if(pendingGallery[key]?.[index])pendingGallery[key][index].caption=field.value.slice(0,220);
+        }
+        refreshHybridPreview();
+      });
+      hybridForm.addEventListener('change',e=>{
+        const field=e.target,key=field.dataset.galleryUpload;
+        if(!key||!pendingGallery[key])return;
+        const files=[...field.files];
+        const remaining=HYBRID_GALLERY_LIMIT-draftGallery[key].length-pendingGallery[key].length;
+        if(files.length>remaining){toast(`Maksimal 5 foto per item. Tersisa ${remaining} tempat.`);field.value='';return}
+        const invalid=files.find(file=>!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)||!file.size||file.size>=HYBRID_GALLERY_MAX_FILE);
+        if(invalid){toast('Gunakan JPEG/PNG/WebP/GIF, maksimal 5 MB per foto.');field.value='';return}
+        files.forEach(file=>pendingGallery[key].push({file,caption:'',previewUrl:URL.createObjectURL(file)}));
+        redrawGallery(key);toast(`${files.length} foto siap diunggah saat Simpan`);
+      });
+      hybridForm.addEventListener('click',e=>{
+        const removed=e.target.closest('[data-gallery-remove],[data-gallery-remove-pending]');if(!removed)return;
+        const key=removed.dataset.galleryRemove||removed.dataset.galleryRemovePending;
+        const idx=Number(removed.dataset.photoIndex);
+        if(removed.hasAttribute('data-gallery-remove'))draftGallery[key]?.splice(idx,1);
+        else{const item=pendingGallery[key]?.splice(idx,1)?.[0];if(item)URL.revokeObjectURL(item.previewUrl)}
+        redrawGallery(key);
+      });
       hybridForm.addEventListener('submit',async e=>{
         e.preventDefault();
         setHybridSaveStatus('');
@@ -863,14 +959,29 @@ function bindDashActions(page,u){
         const db=clone(original);
         const c=readHybridForm();
         const file=hybridForm.elements.imageFile.files[0];
+        const uploaded=[];
 
         setHybridSaveBusy(true);
         setHybridSaveStatus('Menyiapkan perubahan...','working');
 
         try{
+          for(const {key,label} of HYBRID_DETAIL_SECTIONS){
+            if(pendingGallery[key].some(photo=>!String(photo.caption||'').trim()))throw new Error(`Lengkapi keterangan fungsi setiap foto pada bagian ${label}.`);
+          }
           if(file){
-            setHybridSaveStatus('Mengunggah foto...','working');
+            setHybridSaveStatus('Mengunggah foto utama...','working');
             c.image=await fileToDataURL(file);
+          }
+          const totalNew=HYBRID_DETAIL_SECTIONS.reduce((total,{key})=>total+pendingGallery[key].length,0);
+          let uploadedCount=0;
+          for(const {key,label} of HYBRID_DETAIL_SECTIONS){
+            if(draftGallery[key].length+pendingGallery[key].length>HYBRID_GALLERY_LIMIT)throw new Error(`Maksimal 5 foto untuk ${label}.`);
+            for(const photo of pendingGallery[key]){
+              setHybridSaveStatus(`Mengunggah galeri: ${++uploadedCount}/${totalNew} foto...`,'working');
+              const result=await uploadHybridGalleryPhoto(photo.file,key);
+              uploaded.push(result.path);
+              c.detailGallery[key].push({url:result.url,caption:String(photo.caption||'').trim().slice(0,220)});
+            }
           }
 
           db.settings.hybridCard=c;
@@ -883,16 +994,23 @@ function bindDashActions(page,u){
           // Only commit the browser cache after Firestore accepts the change.
           localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));
           setHybridSaveStatus('Perubahan berhasil disimpan.','success');
-          toast('Kartu Pompa Hybrid berhasil diperbarui');
+          toast('Kartu Pompa Hybrid dan galeri foto berhasil diperbarui');
+          const kept=new Set(HYBRID_DETAIL_SECTIONS.flatMap(({key})=>c.detailGallery[key].map(x=>x.url)));
+          const removed=HYBRID_DETAIL_SECTIONS.flatMap(({key})=>(original.settings?.hybridCard?.detailGallery?.[key]||[]).map(x=>x.url)).filter(url=>!kept.has(url));
+          removed.forEach(url=>deleteOwnHybridGalleryPhoto(url));
+          HYBRID_DETAIL_SECTIONS.forEach(({key})=>pendingGallery[key].forEach(item=>URL.revokeObjectURL(item.previewUrl)));
 
           renderPublic();
           // Re-open the page after a short moment so the success state is visible.
           setTimeout(()=>navigateDash('hybridcard'),550);
         }catch(err){
           console.warn('Simpan kartu hybrid gagal',err);
+          await Promise.all(uploaded.map(path=>firebaseStorage?.ref(path).delete().catch(()=>{})));
           localStorage.setItem(DBKEY,JSON.stringify(original));
           let msg='Perubahan belum tersimpan.';
-          if(err?.code==='storage/unauthorized') msg='Akses unggah foto ditolak. Hubungi pengelola sistem.';
+          if(err?.code==='storage/unauthorized') msg='Akses unggah foto ditolak. Periksa Storage Rules dan login admin.';
+          else if(err?.code==='storage/quota-exceeded') msg='Kapasitas penyimpanan foto telah mencapai batas layanan.';
+          else if(err?.message&&!err?.code&&err.message!=='cloud-save-failed') msg=err.message;
           else if(err?.code==='storage/retry-limit-exceeded') msg='Unggah foto gagal karena koneksi. Coba lagi.';
           else if(err?.code==='storage/invalid-format') msg='Format file gambar tidak didukung.';
           else if(err?.message==='cloud-save-failed') msg='Perubahan belum dapat disimpan. Periksa koneksi atau hubungi pengelola sistem.';
@@ -904,7 +1022,7 @@ function bindDashActions(page,u){
       });
       $('#resetHybridCard')?.addEventListener('click',async()=>{if(!confirm('Kembalikan kartu Pompa Hybrid ke pengaturan awal?'))return;if(!firebaseAuth?.currentUser)return toast('Sesi masuk berakhir');const original=getDB(),db=clone(original);db.settings.hybridCard={...DEFAULT_HYBRID_CARD};auditLater(db,'RESET_KARTU_HYBRID','Default');setHybridSaveBusy(true);setHybridSaveStatus('Mengembalikan pengaturan default...','working');const ok=await pushCloudNow(db);if(ok){localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));setHybridSaveStatus('Pengaturan awal berhasil dipulihkan.','success');renderPublic();setTimeout(()=>navigateDash('hybridcard'),450)}else{localStorage.setItem(DBKEY,JSON.stringify(original));setHybridSaveStatus('Pengaturan awal belum dapat dipulihkan.','error')}setHybridSaveBusy(false)});
       $('#removeHybridImage')?.addEventListener('click',async()=>{if(!firebaseAuth?.currentUser)return toast('Sesi masuk berakhir');const original=getDB(),db=clone(original);db.settings.hybridCard={...hybridCardSettings(db),image:'',useImage:false};auditLater(db,'HAPUS_GAMBAR_KARTU_HYBRID','');setHybridSaveBusy(true);setHybridSaveStatus('Menghapus gambar dari kartu...','working');const ok=await pushCloudNow(db);if(ok){localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));setHybridSaveStatus('Perubahan tersimpan online.','success');renderPublic();setTimeout(()=>navigateDash('hybridcard'),450)}else{localStorage.setItem(DBKEY,JSON.stringify(original));setHybridSaveStatus('Perubahan belum dapat disimpan.','error')}setHybridSaveBusy(false)});
-      $('#previewHybridDetail')?.addEventListener('click',()=>{const c=readHybridForm();openDetail('SISTEM POMPA HYBRID',c.detailTitle,c.detailSubtitle,hybridDetailMarkup(c))});
+      $('#previewHybridDetail')?.addEventListener('click',()=>{const c=readHybridForm();c.detailGallery=Object.fromEntries(HYBRID_DETAIL_SECTIONS.map(({key})=>[key,[...c.detailGallery[key],...pendingGallery[key].map(x=>({url:x.previewUrl,caption:x.caption}))]]));openDetail('SISTEM POMPA HYBRID',c.detailTitle,c.detailSubtitle,hybridDetailMarkup(c,true))});
     }
 
 
@@ -1128,6 +1246,6 @@ function bind(){
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('#installBtn').hidden=false});
 $('#installBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('#installBtn').hidden=true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=28',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=29',{updateViaCache:'none'}).catch(()=>{}));
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#detailView').hidden)closeDetail();else if(!$('#authView').hidden)closeAuth()}});
 bind();renderPublic();syncMobileNavigation();initFirebaseOnline();if(currentUser())showDashboard();

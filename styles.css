@@ -375,3 +375,29 @@ button,a{-webkit-tap-highlight-color:transparent}
  .flyer-download-header .flyer-download-label{font-size:9.5px!important}
  #loginBtn,#logoutBtn{padding:7px!important;font-size:10px!important}
 }
+
+
+/* V29 — Galeri foto tiap bagian Kartu Pompa Hybrid */
+.hybrid-admin-section{padding:13px;border:1px solid #dbece0;border-radius:17px;background:rgba(250,253,250,.88);display:grid;gap:10px}
+.hybrid-admin-section>label{font-size:13px;color:#164a31}
+.hybrid-gallery-editor{border:1px solid #d6e7d9;background:#fff;border-radius:14px;overflow:hidden}
+.hybrid-gallery-editor>summary{display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px 13px;color:#184d32;list-style:none;font-size:13px;font-weight:800;user-select:none}
+.hybrid-gallery-editor>summary::-webkit-details-marker{display:none}
+.hybrid-gallery-editor>summary .gallery-summary-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:#e9f7ec;font-size:18px}
+.hybrid-gallery-editor>summary>span:nth-child(2){flex:1;min-width:0}.hybrid-gallery-editor summary small{display:block;color:#789084;font-size:10px;font-weight:600;margin-top:2px}
+.gallery-count{font-size:12px;background:#e7f5eb;color:#15613a;border-radius:50px;padding:6px 10px;white-space:nowrap}
+.gallery-editor-content{border-top:1px solid #e6efe7;padding:13px;display:grid;gap:12px}.gallery-editor-content>p{margin:0;font-size:12px;line-height:1.5}
+.gallery-editor-items{display:grid;gap:10px}.gallery-edit-item{display:grid;grid-template-columns:104px 1fr;gap:11px;align-items:start;padding:9px;border:1px solid #e4ede5;background:#fbfdfb;border-radius:12px}
+.gallery-edit-item img{width:100%;height:100px;object-fit:cover;border-radius:9px;background:#edf3ec}.gallery-edit-item>div{min-width:0;display:grid;gap:7px}.gallery-edit-item label{font-size:11px}.gallery-edit-item textarea{font-size:12px;resize:vertical;min-height:64px}
+.gallery-remove{justify-self:start;background:#fff1ee;border:1px solid #f2cbbf;color:#a63f27;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:750;cursor:pointer}
+.gallery-pending-chip{color:#16763e;background:#e6f7eb;width:fit-content;border-radius:30px;padding:4px 8px;font-size:10px;font-weight:800}.gallery-empty{border:1px dashed #ccdccc;border-radius:12px;padding:14px;color:#778779;text-align:center;font-size:12px}
+.gallery-upload-label{display:block!important;border:1.5px dashed #6bb889;background:#edfaef;color:#15643d;border-radius:12px;padding:12px;font-size:12px!important;cursor:pointer}
+.gallery-upload-label input{margin-top:8px;background:#fff}.gallery-upload-label:has(input:disabled){opacity:.5;cursor:not-allowed}
+.hybrid-detail-sections{display:grid;gap:14px;margin:14px 0}.hybrid-detail-section{border:1px solid #dfecdf;border-radius:17px;padding:17px;background:rgba(253,255,253,.93)}
+.hybrid-detail-section h4{margin:0 0 7px;font-size:16px;color:#19543a}.hybrid-detail-section>p{margin:0;color:#526c5b;font-size:13px;line-height:1.65}
+.hybrid-public-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-top:13px}
+.hybrid-public-gallery figure{margin:0;background:#f4faf5;border:1px solid #e0ede3;border-radius:11px;overflow:hidden}.hybrid-public-gallery a{display:block;aspect-ratio:4/3;overflow:hidden}.hybrid-public-gallery img{width:100%;height:100%;object-fit:cover;transition:transform .2s}.hybrid-public-gallery a:active img{transform:scale(1.03)}
+.hybrid-public-gallery figcaption{padding:9px 10px;color:#365943;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+@media(max-width:620px){.hybrid-admin-section{padding:10px}.gallery-editor-content{padding:10px}.gallery-edit-item{grid-template-columns:82px 1fr;gap:9px}.gallery-edit-item img{height:84px}.hybrid-public-gallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hybrid-detail-section{padding:13px}.hybrid-public-gallery figcaption{font-size:10px}}
+
+@media(max-width:900px){.hybrid-save-bar{bottom:calc(74px + env(safe-area-inset-bottom));box-shadow:0 -7px 24px rgba(22,68,39,.07)}}

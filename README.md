@@ -18,7 +18,7 @@ Website resmi program Listrik Masuk Sawah: informasi pompa irigasi hybrid, CPCL,
 ## Publikasi GitHub Pages
 1. Ekstrak ZIP dan unggah **seluruh isinya** ke folder sumber Pages pada repository `hybrid`.
 2. Pastikan `index.html`, `app.js`, `styles.css`, `sw.js`, `manifest.webmanifest`, folder `assets`, serta `Flyer_ENERSIA_Pompa_Hybrid_6_Inchi.pdf` berada pada lokasi yang benar.
-3. Setelah deployment selesai, refresh halaman agar cache `v27` dimuat. PDF dapat diunduh tanpa login.
+3. Setelah deployment selesai, refresh halaman agar cache `v29` dimuat. PDF dapat diunduh tanpa login.
 
 ## Data dan akses
 Versi ini tidak memasukkan penerima atau klaim rekaan pada instalasi baru. Data lama yang telah tersimpan di browser/Firebase **tidak dihapus** otomatis. Sebelum publikasi, periksa kembali daftar CPCL dan klaim yang mungkin berasal dari data awal pada versi terdahulu, lalu hapus melalui dashboard bila bukan data riil.
@@ -30,3 +30,9 @@ Hanya satu tombol unduh flyer di navigasi atas. Banner unduh tambahan dan tautan
 
 ## Tampilan mobile v28
 Tampilan mobile-first bergaya etalase aplikasi: header dan pencarian ringkas, foto pompa sebagai hero, akses cepat empat layanan, katalog dua kolom, navigasi bawah lima menu aktif pada halaman publik maupun dashboard, panel login seperti bottom sheet, tombol WA aman dari navigasi bawah, PDF flyer satu pintu di header. Tidak menggunakan aset atau identitas Shopee. Cache PWA v28.
+
+
+## Galeri detail per item (v29)
+Admin → Kartu Pompa Hybrid → Detail Saat Kartu Diklik. Setiap 7 item informasi memiliki galeri tersendiri maksimal 5 foto. Pilih foto (JPEG/PNG/WebP/GIF, maksimal 5 MB per foto), isi keterangan posisi/fungsi komponen pada setiap foto baru, kemudian tekan Simpan Perubahan Online. File foto diunggah ke Firebase Storage (`uploads/{uid}/hybrid-detail/...`); URL dan caption tersimpan di Firestore bersama pengaturan kartu. Foto lama dapat dihapus atau keterangannya diedit. Pengunjung melihat foto dan caption di detail kartu, mengetuk foto akan membukanya ukuran penuh. Admin harus masuk dan Firebase Storage Rules mendukung folder `uploads/{uid}/...`.
+
+Catatan keamanan: aturan lama appData/main masih membuka seluruh payload untuk pembaca publik dan memperbolehkan semua akun login mengubah seluruh dokumen. Pisahkan data pribadi dan terapkan otorisasi admin server-side sebelum memakai data CPCL riil.
