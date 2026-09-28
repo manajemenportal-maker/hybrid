@@ -48,3 +48,11 @@ Divisi Penjualan berada di dalam halaman publik sebelum footer, memiliki tombol 
 
 ## Logo KSA v33
 Logo KSA 3D disematkan sebagai data URI langsung di `index.html` untuk mencegah gambar hilang apabila asset terpisah belum terunggah. File `assets/ksa-logo-3d.webp` tetap disertakan. Cache PWA diperbarui ke v33.
+
+
+## Serial Number Pompa v34
+Form registrasi penerima mewajibkan Serial Number yang tercantum pada pelat unit. Serial dinormalisasi, dicek agar tidak digunakan oleh CPCL berbeda/akun yang sudah aktif, dan disimpan bersama data penerima serta garansi dalam transaksi Firestore. Bila admin sudah memasukkan serial pada CPCL, form menampilkan informasi unit, wilayah, dan tautan peta bila koordinat sudah ada, serta dapat memakai CPCL/wilayah yang sesuai. Untuk unit baru, lokasi administratif diisi pada registrasi; petugas dapat mengambil titik GPS secara opsional dari perangkat saat berada di lokasi unit. Titik CPCL yang sudah dicatat admin dipertahankan. Pencarian publik CPCL bisa memakai nomor seri; dashboard admin, unit penerima, kartu garansi dan ekspor CSV menampilkan nomor seri. Perbaikan nomor seri/penugasan unit dilakukan oleh admin.
+
+Catatan: identitas serial bukan pelacak GPS real-time. Arsitektur database lama masih menyimpan data publik dan pribadi dalam appData/main serta mengizinkan semua akun terautentikasi mengubah payload. Sebelum menerima data riil, pisahkan dokumen publik/pribadi dan tegakkan otorisasi administrator di Security Rules/backend.
+
+Perbaikan sinkronisasi: masuk akun tidak lagi otomatis menimpa Firestore memakai cache browser lama.

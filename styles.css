@@ -473,3 +473,17 @@ button,a{-webkit-tap-highlight-color:transparent}
 .topbar .brand-seal{display:block!important;opacity:1!important;visibility:visible!important;flex:0 0 42px;min-width:42px;width:42px;height:42px;object-fit:contain;position:relative;z-index:1;}
 @media(max-width:620px){.topbar .brand-seal{flex-basis:34px;min-width:34px;width:34px;height:34px;}}
 @media(max-width:390px){.topbar .brand-seal{flex-basis:30px;min-width:30px;width:30px;height:30px;}.topbar .brand{max-width:calc(100% - 125px);}.topbar .brand-copy{gap:4px;}}
+
+
+/* Registrasi Serial Number & pelacakan lokasi v34 */
+.field-required{color:#d23d3d;font-weight:900}
+.serial-field-hint{display:block;margin:-7px 0 6px;line-height:1.5}
+.serial-lookup{padding:12px 14px;border:1px solid #d8e9db;border-radius:13px;background:rgba(235,248,239,.92);font-size:12px;line-height:1.55;color:#20513a;display:grid;gap:4px;word-break:break-word}
+.serial-lookup b{font-size:13px}.serial-lookup span,.serial-lookup small{display:block}.serial-lookup strong{font-size:11px}.serial-lookup a{color:#096c43;font-weight:800;text-decoration:underline}
+.serial-lookup.error{background:#fff2ef;border-color:#f2c7bd;color:#a63929}.serial-lookup.new{background:#f3f8ff;border-color:#d6e4f9;color:#25577d}
+.serial-use-data{width:100%;border:1px solid #9ac9a8!important;background:#f0f9f2!important;color:#086d3e!important;font-size:12px!important;font-weight:800!important}
+.reg-location-box{display:grid;gap:9px;padding:13px;border:1px solid #d8e6dc;border-radius:14px;background:rgba(255,255,255,.82)}
+.reg-location-box b{font-size:13px}.reg-location-box small{line-height:1.45}.reg-gps-status{font-size:11px;line-height:1.5;color:#36574b;word-break:break-word}
+#regGetGPS{width:100%;font-size:12px;font-weight:800;min-height:42px}#regGetGPS:disabled{opacity:.55;cursor:wait}
+.serial-filter{min-width:215px;max-width:280px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:12px}
+@media(max-width:620px){.serial-filter{min-width:0;max-width:none;flex:1 1 100%;width:100%}.serial-lookup{padding:12px}.reg-location-box{padding:12px}}

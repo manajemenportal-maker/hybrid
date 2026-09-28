@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f6b3b" />
-  <meta name="application-version" content="32" />
+  <meta name="application-version" content="34" />
   <meta name="description" content="Listrik Masuk Sawah — Pompa Irigasi Hybrid, CPCL, Garansi, dan Layanan Purna Jual." />
   <title>Listrik Masuk Sawah</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=33" />
+  <link rel="stylesheet" href="styles.css?v=34" />
   <link rel="preconnect" href="https://unpkg.com">
 </head>
 <body>
@@ -98,6 +98,7 @@
             <h2>CPCL & Titik Kelompok</h2>
           </div>
           <div class="filter-row">
+            <input id="serialFilter" class="serial-filter" type="search" placeholder="Cari Serial Number / CPCL" aria-label="Cari Serial Number atau CPCL">
             <select id="provinceFilter"><option value="">Semua Provinsi</option></select>
             <select id="statusFilter">
               <option value="">Semua Status</option>
@@ -181,6 +182,17 @@
           <label>Provinsi<select id="regProvince" name="province" required><option value="">Pilih Provinsi</option></select></label>
           <label>Desa / Kecamatan<input id="regVillage" name="village" required></label>
           <label>ID Bantuan / Nomor CPCL<input id="regCpcl" name="cpcl" placeholder="CPCL-2026-001" autocomplete="off" required></label>
+          <label>Serial Number Pompa <span class="field-required">*</span><input id="regSerial" name="serial" placeholder="Contoh: KSA160D-0001" autocomplete="off" autocapitalize="characters" maxlength="64" spellcheck="false" required></label>
+          <small class="muted serial-field-hint">Salin nomor seri dari pelat identitas unit. Satu nomor seri hanya boleh digunakan oleh satu CPCL.</small>
+          <div id="regSerialInfo" class="serial-lookup" role="status" aria-live="polite">Masukkan Serial Number untuk melihat data unit dan lokasi yang sudah tercatat.</div>
+          <button type="button" id="regUseUnitData" class="ghost serial-use-data" hidden>Gunakan Data CPCL & Lokasi Terdaftar</button>
+          <div class="reg-location-box">
+            <b>📍 Titik Lokasi Pompa</b>
+            <small class="muted">Opsional. Ambil GPS saat berada di lokasi unit. Jika titik CPCL sudah dicatat admin, koordinat tersebut tetap digunakan.</small>
+            <input id="regLat" name="lat" type="hidden"><input id="regLng" name="lng" type="hidden">
+            <button type="button" class="ghost" id="regGetGPS">Ambil GPS Lokasi Unit</button>
+            <div id="regGpsInfo" class="reg-gps-status" role="status" aria-live="polite">Belum ada titik GPS dari perangkat ini.</div>
+          </div>
           <label>Buat Password<input id="regPassword" name="password" type="password" minlength="6" autocomplete="new-password" placeholder="Minimal 6 karakter" required></label>
           <label>Ulangi Password<input id="regPasswordConfirm" name="passwordConfirm" type="password" minlength="6" autocomplete="new-password" required></label>
           <label class="consent-row"><input id="regConsent" name="consent" type="checkbox" required> <span>Saya menyatakan data serah terima yang diisi benar.</span></label>
@@ -250,6 +262,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
-  <script src="app.js?v=33"></script>
+  <script src="app.js?v=34"></script>
 </body>
 </html>

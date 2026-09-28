@@ -15,7 +15,7 @@ const FIREBASE_CONFIG = {
   measurementId: "G-K86KZZ8027"
 };
 let firebaseApp=null, firebaseDb=null, firebaseAuth=null, firebaseStorage=null;
-let cloudReady=false, cloudApplying=false, cloudPushTimer=null, cloudUnsubscribe=null, cloudSnapshotLoaded=false;
+let cloudReady=false, cloudApplying=false, cloudPushTimer=null, cloudUnsubscribe=null, cloudSnapshotLoaded=false, registrationInFlight=false;
 
 function setCloudStatus(label,state=''){
   const el=document.querySelector('#cloudStatus'); if(!el)return;
@@ -41,7 +41,7 @@ function hydrateFromCloud(db){
   return x;
 }
 async function pushCloudNow(db){
-  if(!cloudReady||!firebaseDb||!firebaseAuth?.currentUser)return false;
+  if(registrationInFlight||!cloudReady||!firebaseDb||!firebaseAuth?.currentUser)return false;
   try{
     const payload=sanitizeForCloud(db);
     await firebaseDb.collection('appData').doc('main').set({
@@ -57,7 +57,7 @@ async function pushCloudNow(db){
   }
 }
 function scheduleCloudSave(db){
-  if(cloudApplying||!cloudReady||!firebaseAuth?.currentUser)return;
+  if(cloudApplying||registrationInFlight||!cloudReady||!firebaseAuth?.currentUser)return;
   clearTimeout(cloudPushTimer);
   const snapshot=JSON.parse(JSON.stringify(db));
   cloudPushTimer=setTimeout(()=>pushCloudNow(snapshot),500);
@@ -73,6 +73,7 @@ function startCloudSync(){
     }
     const remote=snap.data()?.payload;
     if(!remote)return;
+    if(registrationInFlight)return;
     cloudApplying=true;
     const hydrated=normalizeDB(hydrateFromCloud(remote));
     localStorage.setItem(DBKEY,JSON.stringify(hydrated));
@@ -80,6 +81,7 @@ function startCloudSync(){
     cloudSnapshotLoaded=true;
     setCloudStatus('Online','online');
     renderPublic();
+    if($('#regSerial')?.value)updateRegSerialLookup();
     if(currentUser()&&!document.querySelector('#dashboardView')?.hidden) navigateDash(currentDashPage||'home');
   },err=>{
     console.warn('Cloud sync gagal',err);
@@ -98,7 +100,7 @@ async function initFirebaseOnline(){
     try{if(location.protocol!=='file:'&&firebase.analytics)firebase.analytics()}catch(e){}
     firebaseAuth.onAuthStateChanged(user=>{
       setCloudStatus(user?'Online':'Terhubung','online');
-      if(user&&cloudSnapshotLoaded)pushCloudNow(getDB());
+      // Login does not overwrite Firestore with an older browser cache.
     });
     startCloudSync();
   }catch(err){
@@ -389,6 +391,11 @@ function resetDB(){
   renderPublic(); logout(false); toast('Data aplikasi berhasil direset');
 }
 function uid(prefix){return prefix+'-'+Math.random().toString(36).slice(2,8).toUpperCase()}
+function normalizeSerial(value){return String(value||'').trim().toUpperCase().replace(/\s+/g,'');}
+function serialKey(value){return normalizeSerial(value).replace(/[^A-Z0-9]/g,'');}
+function validSerial(value){const s=normalizeSerial(value);return s.length>=4&&s.length<=64&&/^[A-Z0-9][A-Z0-9._\/-]*$/.test(s);}
+function findBySerial(db,value){const key=serialKey(value);return key?db.beneficiaries.find(b=>serialKey(b.serial)===key):null;}
+function validCoordinates(lat,lng){return lat!==null&&lat!==''&&lat!==undefined&&lng!==null&&lng!==''&&lng!==undefined&&Number.isFinite(Number(lat))&&Number.isFinite(Number(lng))&&Math.abs(Number(lat))<=90&&Math.abs(Number(lng))<=180;}
 function warrantyCode(province='ID'){
   const p=(province||'ID').replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase().padEnd(3,'X');
   return `LMS-${p}-${Date.now().toString().slice(-6)}${Math.random().toString(36).slice(2,4).toUpperCase()}`;
@@ -508,16 +515,16 @@ function fillProvinceFilter(){
   el.value=current;
 }
 function renderCPCL(){
-  const db=getDB(), prov=$('#provinceFilter')?.value||'', status=$('#statusFilter')?.value||'';
-  const rows=db.beneficiaries.filter(x=>(!prov||x.province===prov)&&(!status||x.status===status));
+  const db=getDB(), prov=$('#provinceFilter')?.value||'', status=$('#statusFilter')?.value||'', serialQuery=String($('#serialFilter')?.value||'').toUpperCase().trim();
+  const rows=db.beneficiaries.filter(x=>(!prov||x.province===prov)&&(!status||x.status===status)&&(!serialQuery||[x.id,x.serial,x.asset,x.group,x.village].some(v=>String(v||'').toUpperCase().includes(serialQuery))));
   $('#cpclList').innerHTML=rows.map(x=>{
-    const canMap=Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lng)) && !(Number(x.lat)===0&&Number(x.lng)===0);
+    const canMap=validCoordinates(x.lat,x.lng);
     return `<article class="cpcl-card" data-cpcl-id="${esc(x.id)}" role="button" tabindex="0" aria-label="Lihat detail ${esc(x.group)}"><div class="row"><div><small>${esc(x.id)}</small><h4>${esc(x.group)}</h4><small>${esc(x.village)}, ${esc(x.province)}</small></div><span class="status ${slug(x.status)}">${esc(x.status)}</span></div>
-      <div class="tags"><span class="tag">${esc(x.asset)}</span><span class="tag">${esc(x.name)}</span></div>
+      <div class="tags"><span class="tag">${esc(x.asset)}</span>${x.serial?`<span class="tag">SN: ${esc(x.serial)}</span>`:``}<span class="tag">${esc(x.name)}</span></div>
       <div class="card-more"><span>Lihat detail penerima & unit</span><span>→</span></div>
       ${canMap?`<button class="small-btn" onclick="event.stopPropagation();window.open('https://www.google.com/maps?q=${Number(x.lat)},${Number(x.lng)}','_blank')">Buka Titik</button>`:''}</article>`;
   }).join('')||'<p class="muted">Tidak ada data.</p>';
-  const all=db.beneficiaries.filter(x=>Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lng))&&!(Number(x.lat)===0&&Number(x.lng)===0));
+  const all=rows.filter(x=>validCoordinates(x.lat,x.lng));
   const minLat=-8,maxLat=-5,minLng=105,maxLng=112;
   $('#mapPins').innerHTML=all.map(x=>{const left=Math.max(6,Math.min(94,((x.lng-minLng)/(maxLng-minLng))*100));const top=Math.max(8,Math.min(92,(1-(x.lat-minLat)/(maxLat-minLat))*100));return `<div class="map-pin" title="${esc(x.group)}" style="left:${left}%;top:${top}%"><span>${esc(x.group)}</span></div>`}).join('');
 }
@@ -611,7 +618,7 @@ function openProductDetail(id){
 }
 function openCPCLDetail(id){
   const b=getDB().beneficiaries.find(x=>x.id===id); if(!b)return; const w=warrantyStatus(b);
-  const canMap=Number.isFinite(Number(b.lat))&&Number.isFinite(Number(b.lng))&&!(Number(b.lat)===0&&Number(b.lng)===0);
+  const canMap=validCoordinates(b.lat,b.lng);
   const image=b.photo?`<img class="detail-image" src="${safeUrl(b.photo)}" alt="Lokasi atau unit ${esc(b.group)}">`:'';
   const mapBtn=canMap?`<button class="primary" data-detail-map="${Number(b.lat)},${Number(b.lng)}">📍 Buka Titik di Peta</button>`:'';
   openDetail('CPCL / TITIK KELOMPOK',b.group,`${b.village}, ${b.province}`,`${image}<div class="detail-meta"><div><small>Nomor CPCL</small><b>${esc(b.id)}</b></div><div><small>Status</small><b>${esc(b.status)}</b></div><div><small>Garansi</small><b>${esc(w.label)}</b></div></div>${detailBoxes([
@@ -872,10 +879,10 @@ function adminPage(page){
         <label>ID CPCL<input name="id" placeholder="CPCL-2026-004" required></label><label>Nama Penerima<input name="name" required></label>
         <label>Kelompok Tani<input name="group" required></label><label>No. HP<input name="phone" required></label><label>Email<input name="email" type="email"></label><label>Provinsi<select name="province" required><option value="">Pilih Provinsi</option>${provinceOptions()}</select></label>
         <label>Desa / Kecamatan<input name="village" required></label><label>Status<select name="status"><option>Verifikasi</option><option>Siap Serah Terima</option><option>Aktif</option></select></label>
-        <label>Unit Bantuan<input name="asset" value='Pompa Hybrid 6 inchi'></label><label>No. Seri<input name="serial"></label><label>Latitude<input name="lat" type="number" step="any" placeholder="-6.20"></label><label>Longitude<input name="lng" type="number" step="any" placeholder="106.80"></label>
+        <label>Unit Bantuan<input name="asset" value='Pompa Hybrid 6 inchi'></label><label>Serial Number Pompa<input name="serial" maxlength="64" placeholder="Mis. KSA160D-0001"></label><label>Latitude<input name="lat" type="number" step="any" placeholder="-6.20"></label><label>Longitude<input name="lng" type="number" step="any" placeholder="106.80"></label>
         <label>Lama Garansi (bulan)<input name="warrantyMonths" type="number" value="12" min="1"></label><label>URL Foto Lokasi/Unit<input name="photo" placeholder="https://..."></label>
         <div style="align-self:end"><button class="primary" id="saveCPCLBtn">Simpan CPCL</button></div></form></div>
-      <div class="panel"><div class="panel-title-row"><h3>Daftar Penerima</h3><div class="inline-actions"><input id="adminCPCLSearch" class="mini-search" placeholder="Cari CPCL/nama/kelompok..."><button class="ghost" id="exportCPCL">Export CSV</button></div></div><div id="adminCPCLTable">${beneficiaryTable(db.beneficiaries,true)}</div></div>`;
+      <div class="panel"><div class="panel-title-row"><h3>Daftar Penerima</h3><div class="inline-actions"><input id="adminCPCLSearch" class="mini-search" placeholder="Cari CPCL/serial/nama/lokasi..."><button class="ghost" id="exportCPCL">Export CSV</button></div></div><div id="adminCPCLTable">${beneficiaryTable(db.beneficiaries,true)}</div></div>`;
   }
   if(page==='products'){
     return `<div class="panel"><div class="panel-title-row"><h3 id="productFormTitle">Tambah Produk</h3><button type="button" class="ghost" id="cancelEditProduct" hidden>Batal Edit</button></div>
@@ -1208,7 +1215,10 @@ function bindDashActions(page,u){
       e.preventDefault(); const f=new FormData(e.target),db=getDB(),editId=f.get('editId'),newId=f.get('id').trim();
       if(!editId && db.beneficiaries.some(x=>x.id===newId))return toast('ID CPCL sudah ada');
       if(editId && newId!==editId && db.beneficiaries.some(x=>x.id===newId))return toast('ID CPCL baru sudah digunakan');
-      const payload={id:newId,name:f.get('name').trim(),group:f.get('group').trim(),phone:f.get('phone').trim(),email:f.get('email').trim(),province:f.get('province').trim(),village:f.get('village').trim(),status:f.get('status'),asset:f.get('asset').trim(),serial:f.get('serial').trim(),lat:f.get('lat')===''?null:Number(f.get('lat')),lng:f.get('lng')===''?null:Number(f.get('lng')),warrantyMonths:Number(f.get('warrantyMonths')||12),photo:f.get('photo').trim()};
+      const serial=normalizeSerial(f.get('serial'));
+      if(serial&&!validSerial(serial))return toast('Format Serial Number tidak valid. Periksa pelat unit.');
+      if(serial&&db.beneficiaries.some(x=>x.id!==editId&&serialKey(x.serial)===serialKey(serial)))return toast('Serial Number sudah dipakai pada CPCL lain.');
+      const payload={id:newId,name:f.get('name').trim(),group:f.get('group').trim(),phone:f.get('phone').trim(),email:f.get('email').trim(),province:f.get('province').trim(),village:f.get('village').trim(),status:f.get('status'),asset:f.get('asset').trim(),serial,lat:f.get('lat')===''?null:Number(f.get('lat')),lng:f.get('lng')===''?null:Number(f.get('lng')),warrantyMonths:Number(f.get('warrantyMonths')||12),photo:f.get('photo').trim()};
       if(editId){const idx=db.beneficiaries.findIndex(x=>x.id===editId);const old=db.beneficiaries[idx];db.beneficiaries[idx]={...old,...payload};db.users.forEach(x=>{if(x.beneficiaryId===editId)x.beneficiaryId=newId});db.claims.forEach(x=>{if(x.beneficiaryId===editId)x.beneficiaryId=newId});auditLater(db,'EDIT_CPCL',`${editId} => ${newId}`);} else {db.beneficiaries.push({...payload,warrantyCode:'',warrantyStart:'',userId:''});auditLater(db,'TAMBAH_CPCL',newId)}
       saveDB(db);navigateDash('beneficiaries');renderPublic();toast(editId?'CPCL diperbarui':'CPCL ditambahkan');
     });
@@ -1270,6 +1280,50 @@ function setRegisterBusy(busy){
   btn.textContent=busy?'Mendaftarkan...':'Daftar & Buat Kode Garansi';
 }
 
+function setRegSerialInfo(html,state=''){
+  const el=$('#regSerialInfo');if(!el)return;
+  el.innerHTML=html;el.className='serial-lookup '+state;
+}
+function updateRegSerialLookup(){
+  const serial=normalizeSerial($('#regSerial')?.value);
+  const use=$('#regUseUnitData');if(use)use.hidden=true;
+  if(!serial){setRegSerialInfo('Masukkan Serial Number untuk melihat unit dan lokasi yang sudah tercatat.');return}
+  if(!validSerial(serial)){setRegSerialInfo('Periksa Serial Number. Gunakan 4–64 karakter sesuai pelat unit.','error');return}
+  const b=findBySerial(getDB(),serial);
+  if(!b){setRegSerialInfo(`<b>Serial ${esc(serial)}</b> belum ada di daftar CPCL. Jika unit baru, nomor ini akan ditautkan ke CPCL dan lokasi yang Anda isi.`, 'new');return}
+  const cpcl=String($('#regCpcl')?.value||'').trim().toUpperCase();
+  const locked=!!b.userId;
+  const conflicting=!!cpcl&&cpcl!==String(b.id||'').toUpperCase();
+  const where=[b.village,b.province].filter(Boolean).join(', ')||'Lokasi administratif belum dicatat';
+  const map=validCoordinates(b.lat,b.lng)?`<a href="https://www.google.com/maps?q=${Number(b.lat)},${Number(b.lng)}" target="_blank" rel="noopener noreferrer">📍 Lihat titik di Google Maps ↗</a>`:'<small>Koordinat GPS belum tercatat.</small>';
+  setRegSerialInfo(`<b>${esc(b.asset||'Pompa Hybrid 6 inchi')}</b><span>SN: ${esc(b.serial)} • CPCL: ${esc(b.id)}</span><span>Lokasi: ${esc(where)}</span>${map}${locked?'<strong>Unit ini sudah terhubung ke akun penerima. Hubungi admin.</strong>':conflicting?'<strong>CPCL berbeda. Gunakan data CPCL yang sesuai dengan nomor seri ini.</strong>':'<strong>Nomor seri dikenali. Lanjutkan registrasi dengan CPCL tersebut.</strong>'}`,locked||conflicting?'error':'found');
+  if(use&&!locked)use.hidden=false;
+}
+function useRegisteredSerialData(){
+  const b=findBySerial(getDB(),$('#regSerial')?.value);
+  if(!b||b.userId)return;
+  $('#regCpcl').value=b.id||'';
+  if(b.province)$('#regProvince').value=b.province;
+  if(b.village)$('#regVillage').value=b.village;
+  if(b.group&&!$('#regGroup').value.trim())$('#regGroup').value=b.group;
+  updateRegSerialLookup();
+  setRegisterMessage('Data CPCL dan wilayah dari nomor seri telah dimasukkan. Periksa kembali sebelum mendaftar.','success');
+}
+function requestRegistrationGPS(){
+  const status=$('#regGpsInfo'),button=$('#regGetGPS');
+  if(!navigator.geolocation){status.textContent='GPS perangkat tidak tersedia. Isi wilayah, atau minta admin mencatat titik lokasi.';return}
+  button.disabled=true;status.textContent='Meminta izin lokasi perangkat...';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude,longitude,accuracy}=pos.coords;
+    $('#regLat').value=latitude.toFixed(7);$('#regLng').value=longitude.toFixed(7);
+    status.textContent=`Titik GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} • Akurasi ±${Math.round(accuracy)} m. Pastikan perangkat berada di lokasi pompa.`;
+    button.disabled=false;
+  },err=>{
+    button.disabled=false;
+    status.textContent=err.code===1?'Izin lokasi tidak diberikan. Titik GPS dapat diisi admin.':'GPS belum berhasil diperoleh. Coba di lokasi dengan sinyal lebih baik.';
+  },{enableHighAccuracy:true,timeout:16000,maximumAge:0});
+}
+
 async function registerBeneficiary(form){
   setRegisterMessage('');
   if(!firebaseAuth||!firebaseDb){
@@ -1285,12 +1339,17 @@ async function registerBeneficiary(form){
   const province=String(f.get('province')||'').trim();
   const village=String(f.get('village')||'').trim();
   const cpcl=String(f.get('cpcl')||'').trim().toUpperCase();
+  const serial=normalizeSerial(f.get('serial'));
+  const lat=f.get('lat')===''?null:Number(f.get('lat'));
+  const lng=f.get('lng')===''?null:Number(f.get('lng'));
   const password=String(f.get('password')||'');
   const passwordConfirm=String(f.get('passwordConfirm')||'');
 
-  if(!name||!group||!phone||!email||!province||!village||!cpcl){
+  if(!name||!group||!phone||!email||!province||!village||!cpcl||!serial){
     setRegisterMessage('Lengkapi seluruh data registrasi.','error'); return;
   }
+  if(!validSerial(serial)){setRegisterMessage('Serial Number wajib sesuai pelat unit (4–64 karakter: huruf, angka, titik, garis miring, atau tanda hubung).','error');return}
+  if((lat!==null||lng!==null)&&!validCoordinates(lat,lng)){setRegisterMessage('Koordinat GPS tidak valid. Ambil titik lokasi kembali.','error');return}
   if(password.length<6){setRegisterMessage('Password minimal 6 karakter.','error');return}
   if(password!==passwordConfirm){setRegisterMessage('Konfirmasi password tidak sama.','error');return}
   if(!f.get('consent')){setRegisterMessage('Centang pernyataan kebenaran data.','error');return}
@@ -1299,51 +1358,70 @@ async function registerBeneficiary(form){
   }
 
   const originalDb=getDB();
-  const db=clone(originalDb);
-  let b=db.beneficiaries.find(x=>String(x.id||'').toUpperCase()===cpcl);
-  if(b&&b.userId){setRegisterMessage('Nomor CPCL ini sudah terhubung ke akun penerima.','error');return}
-  if(db.users.some(x=>String(x.email||'').toLowerCase()===email)){
+  const checkDb=clone(originalDb);
+  const assigned=findBySerial(checkDb,serial);
+  const cpclRecord=checkDb.beneficiaries.find(x=>String(x.id||'').toUpperCase()===cpcl);
+  if(assigned&&String(assigned.id||'').toUpperCase()!==cpcl){setRegisterMessage('Nomor seri tercatat pada CPCL lain. Periksa nomor seri dan CPCL.','error');return}
+  if(assigned?.userId||cpclRecord?.userId){setRegisterMessage('Unit atau CPCL sudah diregistrasi. Hubungi admin untuk perubahan data.','error');return}
+  if(cpclRecord?.serial&&serialKey(cpclRecord.serial)!==serialKey(serial)){setRegisterMessage('Serial Number tidak cocok dengan data CPCL yang tercatat.','error');return}
+  if(checkDb.users.some(x=>String(x.email||'').toLowerCase()===email)){
     setRegisterMessage('Email ini sudah terdaftar. Silakan gunakan menu Masuk.','error');return;
   }
 
   setRegisterBusy(true);
-  setRegisterMessage('Memproses registrasi dan aktivasi garansi...','working');
-
+  setRegisterMessage('Memproses registrasi unit dan aktivasi garansi...','working');
   let cred=null;
   try{
+    registrationInFlight=true;
     cred=await firebaseAuth.createUserWithEmailAndPassword(email,password);
-    const authUid=cred.user.uid;
-    const code=b?.warrantyCode||warrantyCode(province);
-    const userId=uid('U');
-    const today=new Date().toISOString().slice(0,10);
-
-    if(!b){
-      b={id:cpcl,name,group,phone,email,province,village,lat:null,lng:null,status:'Aktif',asset:'Pompa Hybrid 6 inchi',serial:'',warrantyCode:code,warrantyStart:today,warrantyMonths:12,userId,photo:''};
-      db.beneficiaries.push(b);
-    }else{
-      b.name=name;b.group=group;b.phone=phone;b.email=email;b.province=province;b.village=village;
-      b.userId=userId;b.status='Aktif';b.warrantyCode=code;b.warrantyStart=b.warrantyStart||today;
-    }
-
-    db.users.push({id:userId,uid:authUid,name,email,password:'',role:'user',status:'aktif',beneficiaryId:b.id});
-    auditLater(db,'REGISTRASI_PENERIMA',`${b.id} ${b.warrantyCode}`);
-    localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));
-
-    const synced=await pushCloudNow(db);
-    if(!synced) throw new Error('firestore-save-failed');
-
+    const userId=uid('U'), authUid=cred.user.uid, today=new Date().toISOString().slice(0,10);
+    const doc=firebaseDb.collection('appData').doc('main');
+    const outcome=await firebaseDb.runTransaction(async tx=>{
+      const snap=await tx.get(doc);
+      const db=snap.exists&&snap.data()?.payload?normalizeDB(hydrateFromCloud(snap.data().payload)):normalizeDB(originalDb);
+      let b=db.beneficiaries.find(x=>String(x.id||'').toUpperCase()===cpcl);
+      const holder=findBySerial(db,serial);
+      if(holder&&String(holder.id||'').toUpperCase()!==cpcl)throw new Error('serial-owned-other-cpcl');
+      if(holder?.userId||b?.userId)throw new Error('unit-already-registered');
+      if(b?.serial&&serialKey(b.serial)!==serialKey(serial))throw new Error('serial-cpcl-mismatch');
+      if(db.users.some(x=>String(x.email||'').toLowerCase()===email))throw new Error('registered-email');
+      const code=b?.warrantyCode||warrantyCode(province);
+      if(!b){
+        b={id:cpcl,name,group,phone,email,province,village,lat,lng,status:'Aktif',asset:'Pompa Hybrid 6 inchi',serial,warrantyCode:code,warrantyStart:today,warrantyMonths:12,userId,photo:''};
+        db.beneficiaries.push(b);
+      }else{
+        b.name=name;b.group=group;b.phone=phone;b.email=email;
+        // Existing CPCL location and GPS points are preserved unless not set yet.
+        if(!b.province)b.province=province;
+        if(!b.village)b.village=village;
+        if(!validCoordinates(b.lat,b.lng)&&validCoordinates(lat,lng)){b.lat=lat;b.lng=lng}
+        b.serial=serial;b.userId=userId;b.status='Aktif';b.warrantyCode=code;b.warrantyStart=b.warrantyStart||today;
+      }
+      db.users.push({id:userId,uid:authUid,name,email,password:'',role:'user',status:'aktif',beneficiaryId:b.id});
+      auditLater(db,'REGISTRASI_PENERIMA',`${b.id} • SN ${serial} • ${b.warrantyCode}`);
+      tx.set(doc,{payload:sanitizeForCloud(db),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+      return {db,beneficiaryId:b.id,warrantyCode:code};
+    });
+    localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(outcome.db)));
+    setCloudStatus('Online','online');
     sessionStorage.setItem(SESSION,userId);
     form.reset();
+    updateRegSerialLookup();
+    $('#regGpsInfo').textContent='Belum ada titik GPS dari perangkat ini.';
     renderPublic();
     setRegisterMessage('Registrasi berhasil. Membuka dashboard penerima...','success');
-    toast(`Registrasi berhasil • Kode garansi ${b.warrantyCode}`);
-    alert(`REGISTRASI BERHASIL\n\nNomor CPCL: ${b.id}\nKode Garansi: ${b.warrantyCode}\n\nAkun Anda sudah aktif.`);
+    toast(`Registrasi berhasil • SN ${serial}`);
+    alert(`REGISTRASI BERHASIL\n\nNomor CPCL: ${outcome.beneficiaryId}\nSerial Number: ${serial}\nKode Garansi: ${outcome.warrantyCode}\n\nAkun Anda sudah aktif.`);
     showDashboard();
   }catch(err){
     console.warn('Registrasi Firebase gagal',err);
     localStorage.setItem(DBKEY,JSON.stringify(originalDb));
     if(cred?.user){try{await cred.user.delete()}catch(e){console.warn('Rollback auth gagal',e)}}
     let msg='Registrasi gagal. Silakan coba lagi.';
+    if(err?.message==='serial-owned-other-cpcl') msg='Serial Number sudah terikat pada CPCL lain. Hubungi admin.';
+    else if(err?.message==='serial-cpcl-mismatch') msg='Serial Number berbeda dari unit yang ditetapkan untuk CPCL ini.';
+    else if(err?.message==='unit-already-registered') msg='Unit atau CPCL sudah memiliki penerima terdaftar.';
+    else if(err?.message==='registered-email') msg='Email sudah tercatat. Silakan Masuk.';
     if(err?.code==='auth/email-already-in-use') msg='Email sudah digunakan. Silakan masuk atau gunakan email lain.';
     else if(err?.code==='auth/invalid-email') msg='Format email tidak valid.';
     else if(err?.code==='auth/weak-password') msg='Password terlalu lemah. Gunakan minimal 6 karakter.';
@@ -1353,6 +1431,7 @@ async function registerBeneficiary(form){
     setRegisterMessage(msg,'error');
     toast(msg);
   }finally{
+    registrationInFlight=false;
     setRegisterBusy(false);
   }
 }
@@ -1369,12 +1448,12 @@ function bind(){
     const summary=e.target.closest('[data-summary]');if(summary){openSummaryDetail(summary.dataset.summary);return}
   });
   document.addEventListener('keydown',e=>{if(!['Enter',' '].includes(e.key))return;if(e.target.matches('input,select,textarea,button,a'))return;const el=e.target.closest('[data-product-id],[data-cpcl-id],[data-house],[data-summary]');if(!el)return;e.preventDefault();if(el.dataset.productId)openProductDetail(el.dataset.productId);else if(el.dataset.cpclId)openCPCLDetail(el.dataset.cpclId);else if(el.dataset.house)openHouseDetail(el.dataset.house);else if(el.dataset.summary)openSummaryDetail(el.dataset.summary)});
-  $$('.auth-tabs .tab').forEach(b=>b.onclick=()=>switchAuthTab(b.dataset.authTab));$('#loginForm').onsubmit=e=>{e.preventDefault();login($('#loginEmail').value,$('#loginPassword').value)};const rp=$('#regProvince');if(rp)rp.innerHTML='<option value="">Pilih Provinsi</option>'+provinceOptions();$('#registerForm').onsubmit=e=>{e.preventDefault();registerBeneficiary(e.target)};
-  $('#productSearch').oninput=renderProducts;$('#provinceFilter').onchange=renderCPCL;$('#statusFilter').onchange=renderCPCL;$$('[data-scroll]').forEach(b=>b.onclick=()=>{closeAuth();document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:b.dataset.scroll==='#salesDivision'?'auto':'smooth',block:'start'})});$('#toggleSidebar').onclick=()=>setSidebarOpen(!$('.sidebar')?.classList.contains('open'));$('#sidebarBackdrop').onclick=()=>setSidebarOpen(false);$('#mobileBottom').addEventListener('click',e=>{const b=e.target.closest('[data-mobile-target]');if(b)mobileNavigationAction(b.dataset.mobileTarget)});$('#mobileSearchTrigger').onclick=()=>{document.querySelector('#produk')?.scrollIntoView({behavior:'smooth'});setTimeout(()=>$('#productSearch')?.focus({preventScroll:true}),430)};
+  $$('.auth-tabs .tab').forEach(b=>b.onclick=()=>switchAuthTab(b.dataset.authTab));$('#loginForm').onsubmit=e=>{e.preventDefault();login($('#loginEmail').value,$('#loginPassword').value)};const rp=$('#regProvince');if(rp)rp.innerHTML='<option value="">Pilih Provinsi</option>'+provinceOptions();$('#registerForm').onsubmit=e=>{e.preventDefault();registerBeneficiary(e.target)};$('#regSerial').addEventListener('input',updateRegSerialLookup);$('#regSerial').addEventListener('blur',()=>{$('#regSerial').value=normalizeSerial($('#regSerial').value);updateRegSerialLookup()});$('#regCpcl').addEventListener('input',updateRegSerialLookup);$('#regUseUnitData').onclick=useRegisteredSerialData;$('#regGetGPS').onclick=requestRegistrationGPS;
+  $('#productSearch').oninput=renderProducts;$('#provinceFilter').onchange=renderCPCL;$('#serialFilter').oninput=renderCPCL;$('#statusFilter').onchange=renderCPCL;$$('[data-scroll]').forEach(b=>b.onclick=()=>{closeAuth();document.querySelector(b.dataset.scroll)?.scrollIntoView({behavior:b.dataset.scroll==='#salesDivision'?'auto':'smooth',block:'start'})});$('#toggleSidebar').onclick=()=>setSidebarOpen(!$('.sidebar')?.classList.contains('open'));$('#sidebarBackdrop').onclick=()=>setSidebarOpen(false);$('#mobileBottom').addEventListener('click',e=>{const b=e.target.closest('[data-mobile-target]');if(b)mobileNavigationAction(b.dataset.mobileTarget)});$('#mobileSearchTrigger').onclick=()=>{document.querySelector('#produk')?.scrollIntoView({behavior:'smooth'});setTimeout(()=>$('#productSearch')?.focus({preventScroll:true}),430)};
   $('#warrantyCheckForm').onsubmit=e=>{e.preventDefault();const code=$('#warrantyCodeCheck').value.trim().toUpperCase(),db=getDB(),b=db.beneficiaries.find(x=>String(x.warrantyCode||'').toUpperCase()===code),out=$('#warrantyCheckResult');if(!b){out.innerHTML='<div class="result-card warn"><b>Kode tidak ditemukan</b><p>Periksa kembali kode atau hubungi admin proyek.</p></div>';return}const w=warrantyStatus(b);out.innerHTML=`<div class="result-card ${w.cls}"><b>${w.label}</b><p>${esc(b.name)} • ${esc(b.group)}<br>${esc(b.asset)} • ${esc(b.serial||'No. seri belum diisi')}<br>Mulai: ${fmtDate(b.warrantyStart)} ${w.end?`• Berakhir: ${w.end.toLocaleDateString('id-ID')}`:''}</p></div>`};
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('#installBtn').hidden=false});
 $('#installBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('#installBtn').hidden=true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=32',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=34',{updateViaCache:'none'}).catch(()=>{}));
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#detailView').hidden)closeDetail();else if(!$('#authView').hidden)closeAuth()}});
 bind();renderPublic();syncMobileNavigation();initFirebaseOnline();if(currentUser())showDashboard();
