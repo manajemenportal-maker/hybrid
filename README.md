@@ -90,3 +90,11 @@ Catatan: batas waktu membuat aplikasi tidak menggantung, tetapi tidak otomatis m
 - `firestore.rules` kini menambahkan koleksi `houseImages`: foto dapat dibaca publik, sedangkan penulisan/penghapusan dibatasi ke email admin `kalimajasuryaalam@gmail.com`.
 - Perlu menerbitkan `firestore.rules` versi 40 melalui Firebase Console > Firestore Database > Rules. Tidak perlu menerbitkan Storage Rules untuk fitur foto Rumah Pompa.
 - Kuota Firestore Spark tetap berlaku; hindari foto berukuran besar dan perhatikan kuota gratis project.
+
+
+## Versi 41 — upload foto produk tanpa Firebase Storage
+- Menu Produk kini menampilkan pratinjau dan status setelah foto dipilih.
+- Foto produk dikompres ke JPEG ringan dan disimpan pada koleksi Firestore `productImages`; Firebase Storage tidak dipakai untuk unggahan gambar produk.
+- Foto disimpan terpisah dari dokumen `appData/main` untuk menghindari batas ukuran dokumen utama.
+- Terbitkan isi `firestore.rules` versi ini di Firebase Console agar admin dapat membuat/mengubah/menghapus dokumen `productImages`.
+- Batas foto sumber 10 MB; hasil kompresi dibatasi sekitar 450.000 karakter. Penggunaan tetap tunduk pada kuota gratis Firestore.

@@ -30,8 +30,9 @@ function sanitizeForCloud(db){
   if(x.settings?.heroBgImage===EMBEDDED_HERO_BG) x.settings.heroBgImage='__EMBEDDED_HERO__';
   if(x.settings?.hybridCard?.image===EMBEDDED_PUMP_BG) x.settings.hybridCard.image='__EMBEDDED_PUMP__';
   if(Array.isArray(x.users)) x.users=x.users.map(u=>{const y={...u};delete y.password;return y});
-  // Rumah pompa stores compressed images in separate Firestore documents, not Storage.
+  // Rumah pompa and product photos store compressed images in separate Firestore documents, not Storage.
   if(x.settings?.houseCards){['open','semi','secure'].forEach(type=>{const card=x.settings.houseCards[type];if(card?.imageRef)card.image=`__FIRESTORE_IMAGE__:${card.imageRef}`;});}
+  if(Array.isArray(x.products)) x.products=x.products.map(product=>{if(product?.imageRef)product.image=`__FIRESTORE_PRODUCT_IMAGE__:${product.imageRef}`;return product;});
   const scrub=v=>{
     if(Array.isArray(v)) return v.map(scrub);
     if(v&&typeof v==='object'){Object.keys(v).forEach(k=>v[k]=scrub(v[k]));return v}
@@ -171,6 +172,42 @@ async function hydrateCloudHouseImages(db){
   }
   return x;
 }
+function newProductImageDocId(productId){
+  const safe=String(productId||'product').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,50);
+  return `product_${safe}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+}
+async function saveProductImageDocument(imageId,dataUrl){
+  if(!firebaseDb||!cloudReady||!firebaseAuth?.currentUser)throw new Error('Firestore belum siap. Login kembali sebagai admin.');
+  if(typeof dataUrl!=='string'||!dataUrl.startsWith('data:image/jpeg;base64,')||dataUrl.length>450000)throw new Error('Foto belum berhasil dikompres ke ukuran aman. Pilih foto lain.');
+  await withTimeout(firebaseDb.collection('productImages').doc(imageId).set({
+    data:dataUrl,
+    contentType:'image/jpeg',
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }),30000,'Penyimpanan foto produk ke Firestore melewati batas waktu 30 detik. Periksa koneksi dan Firestore Rules versi 41.');
+}
+async function deleteProductImageDocument(imageId){
+  if(!imageId||!firebaseDb||!firebaseAuth?.currentUser)return;
+  await firebaseDb.collection('productImages').doc(imageId).delete();
+}
+async function hydrateCloudProductImages(db){
+  const x=JSON.parse(JSON.stringify(db||{}));
+  if(!Array.isArray(x.products)||!firebaseDb)return x;
+  await Promise.all(x.products.map(async product=>{
+    if(!product)return;
+    const marker=String(product.image||'').match(/^__FIRESTORE_PRODUCT_IMAGE__:(.+)$/);
+    const imageId=product.imageRef||(marker&&marker[1]);
+    if(!imageId)return;
+    try{
+      const snap=await firebaseDb.collection('productImages').doc(imageId).get();
+      product.image=snap.exists&&typeof snap.data()?.data==='string'?snap.data().data:'';
+      product.imageRef=imageId;
+    }catch(err){
+      console.warn('Foto produk tidak dapat dibaca dari Firestore:',product.id,err);
+      product.image='';product.imageRef=imageId;
+    }
+  }));
+  return x;
+}
 function scheduleCloudSave(db){
   if(cloudApplying||registrationInFlight||!cloudReady||!firebaseAuth?.currentUser)return;
   clearTimeout(cloudPushTimer);
@@ -193,7 +230,8 @@ function startCloudSync(){
     cloudApplying=true;
     try{
       const base=hydrateFromCloud(remote);
-      const withImages=await hydrateCloudHouseImages(base);
+      const withHouseImages=await hydrateCloudHouseImages(base);
+      const withImages=await hydrateCloudProductImages(withHouseImages);
       if(version!==cloudSnapshotVersion)return;
       const hydrated=normalizeDB(withImages);
       localStorage.setItem(DBKEY,JSON.stringify(hydrated));
@@ -1114,7 +1152,8 @@ function adminPage(page){
   if(page==='products'){
     return `<div class="panel"><div class="panel-title-row"><h3 id="productFormTitle">Tambah Produk</h3><button type="button" class="ghost" id="cancelEditProduct" hidden>Batal Edit</button></div>
       <form id="productForm" class="dash-form grid-2"><input type="hidden" name="editId"><label>Nama<input name="name" required></label><label>Kategori<input name="category" required></label>
-        <label>Ikon / Emoji<input name="icon" value="⚙️"></label><label>Spesifikasi<input name="spec" required></label><label>URL Gambar<input name="image" placeholder="https://..."></label><label>Unggah Foto<input name="imageFile" type="file" accept="image/*"></label>
+        <label>Ikon / Emoji<input name="icon" value="⚙️"></label><label>Spesifikasi<input name="spec" required></label><label>URL Gambar (opsional)<input name="image" placeholder="https://... bila gambar dari web"></label><label>Unggah Foto<input id="productImageFile" name="imageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+        <div class="product-image-tools" style="grid-column:1/-1"><div id="productImagePreview" class="product-image-preview" hidden></div><div id="productSaveStatus" class="product-save-status" role="status" aria-live="polite">Pilih foto untuk melihat pratinjau. Foto akan dikompres dan disimpan di Firestore gratis saat tombol Simpan ditekan.</div></div>
         <label style="grid-column:1/-1">Deskripsi<textarea name="desc" rows="3" required></textarea></label><div><button class="primary" id="saveProductBtn">Simpan Produk</button></div></form></div>
       <div class="panel"><h3>Katalog</h3><div class="table-wrap"><table class="data-table"><thead><tr><th>Produk</th><th>Kategori</th><th>Spesifikasi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${db.products.map(p=>`<tr><td>${p.image?`<img class="tiny-thumb" src="${safeUrl(p.image)}" alt="">`:esc(p.icon)} <b>${esc(p.name)}</b></td><td>${esc(p.category)}</td><td>${esc(p.spec)}</td><td>${p.active?'Tampil':'Disembunyikan'}</td><td><button class="small-btn" data-edit-product="${p.id}">Edit</button> <button class="small-btn" data-toggle-product="${p.id}">${p.active?'Sembunyikan':'Tampilkan'}</button> <button class="small-btn red" data-del-product="${p.id}">Hapus</button></td></tr>`).join('')}</tbody></table></div></div>`;
   }
@@ -1602,14 +1641,69 @@ function bindDashActions(page,u){
     $('#adminCPCLSearch')?.addEventListener('input',e=>{const q=e.target.value.toLowerCase();$$('#adminCPCLTable tbody tr').forEach(tr=>{tr.hidden=!tr.innerText.toLowerCase().includes(q)})});
     $('#exportCPCL')?.addEventListener('click',exportCPCLCSV);
 
-    $('#productForm')?.addEventListener('submit',async e=>{
-      e.preventDefault(); const f=new FormData(e.target),db=getDB(),editId=f.get('editId'),file=e.target.elements.imageFile.files[0]; let image=f.get('image').trim();
-      try{if(file)image=await fileToDataURL(file)}catch(err){return toast(err.message)}
-      const payload={name:f.get('name').trim(),category:f.get('category').trim(),icon:f.get('icon').trim()||'⚙️',spec:f.get('spec').trim(),desc:f.get('desc').trim(),image};
-      if(editId){const p=db.products.find(x=>x.id===editId);Object.assign(p,payload);auditLater(db,'EDIT_PRODUK',p.name)} else {db.products.push({id:uid('P'),...payload,active:true});auditLater(db,'TAMBAH_PRODUK',payload.name)}
-      saveDB(db);navigateDash('products');renderPublic();toast(editId?'Produk diperbarui':'Produk ditambahkan');
+    const setProductSaveStatus=(message,state='')=>{const el=$('#productSaveStatus');if(el){el.textContent=message;el.className='product-save-status '+state;}};
+    const setProductPreview=(src,caption='')=>{const box=$('#productImagePreview');if(!box)return;box.replaceChildren();if(!src){box.hidden=true;return;}const img=document.createElement('img');img.src=src;img.alt='Pratinjau foto produk';const text=document.createElement('span');text.textContent=caption||'Pratinjau foto produk';box.append(img,text);box.hidden=false;};
+    let productPreviewObjectUrl='';
+    $('#productImageFile')?.addEventListener('change',e=>{
+      const file=e.target.files?.[0];if(!file)return;
+      if(!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)){e.target.value='';setProductSaveStatus('Format foto harus JPEG, PNG, WebP, atau GIF.','error');return toast('Format foto tidak didukung.');}
+      if(file.size>10*1024*1024){e.target.value='';setProductSaveStatus('Ukuran foto maksimal 10 MB sebelum kompresi.','error');return toast('Ukuran foto maksimal 10 MB.');}
+      if(productPreviewObjectUrl)URL.revokeObjectURL(productPreviewObjectUrl);
+      productPreviewObjectUrl=URL.createObjectURL(file);
+      setProductPreview(productPreviewObjectUrl,`${file.name} · ${(file.size/1024/1024).toFixed(2)} MB · siap dikompres`);
+      setProductSaveStatus('Foto dipilih. Tekan Simpan Produk untuk mengompres dan menyimpannya secara online tanpa Firebase Storage.','working');
     });
-    $$('[data-edit-product]').forEach(btn=>btn.onclick=()=>{const db=getDB(),p=db.products.find(x=>x.id===btn.dataset.editProduct),f=$('#productForm');populateForm(f,p,{name:'name',category:'category',icon:'icon',spec:'spec',desc:'desc',image:'image'});f.elements.editId.value=p.id;$('#productFormTitle').textContent='Edit Produk';$('#saveProductBtn').textContent='Simpan Perubahan';$('#cancelEditProduct').hidden=false;f.scrollIntoView({behavior:'smooth'})});
+    $('#productForm')?.addEventListener('submit',async e=>{
+      e.preventDefault();
+      const form=e.target,f=new FormData(form),original=getDB(),data=clone(original),editId=String(f.get('editId')||''),file=form.elements.imageFile?.files?.[0];
+      const existing=editId?data.products.find(x=>x.id===editId):null;
+      if(editId&&!existing)return toast('Produk yang akan diedit tidak ditemukan.');
+      const productId=editId||(uid('P'));
+      const oldImageRef=existing?.imageRef||'';
+      let image=String(f.get('image')||'').trim(),imageRef=oldImageRef,createdImageRef='',mainSaved=false;
+      const submitBtn=$('#saveProductBtn');
+      if(!cloudReady||!firebaseDb||!firebaseAuth?.currentUser){setProductSaveStatus('Penyimpanan online belum siap. Login kembali sebagai admin dan periksa koneksi Firebase.','error');return toast('Login admin/Firebase diperlukan untuk menyimpan produk online.');}
+      if(file&&(!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)||file.size>10*1024*1024)){setProductSaveStatus('Pilih gambar JPEG, PNG, WebP, atau GIF dengan ukuran maksimal 10 MB.','error');return toast('Format atau ukuran foto tidak didukung.');}
+      if(submitBtn){submitBtn.disabled=true;submitBtn.textContent='Memproses foto...';}
+      form.querySelectorAll('input,textarea,select').forEach(el=>{if(el.name!=='editId')el.disabled=true;});
+      try{
+        if(file){
+          setProductSaveStatus('Mengompres foto agar dapat disimpan pada paket gratis...','working');
+          image=await withTimeout(compressHouseImageToDataUrl(file,450000),30000,'Kompresi foto melewati batas waktu 30 detik. Coba foto yang lebih kecil.');
+          imageRef=newProductImageDocId(productId);createdImageRef=imageRef;
+          setProductSaveStatus('Mengunggah foto ke Firestore gratis...','working');
+          await saveProductImageDocument(imageRef,image);
+        }else if(image){
+          if(!/^https?:\/\//i.test(image)){throw new Error('URL gambar harus dimulai dengan https:// atau http://. Untuk foto dari komputer, gunakan tombol Unggah Foto.');}
+          imageRef='';
+        }else if(existing){
+          image=existing.image||'';imageRef=existing.imageRef||'';
+        }else{image='';imageRef='';}
+        const payload={name:String(f.get('name')||'').trim(),category:String(f.get('category')||'').trim(),icon:String(f.get('icon')||'').trim()||'⚙️',spec:String(f.get('spec')||'').trim(),desc:String(f.get('desc')||'').trim(),image,imageRef};
+        if(!payload.name||!payload.category||!payload.spec||!payload.desc)throw new Error('Lengkapi nama, kategori, spesifikasi, dan deskripsi produk.');
+        if(existing){Object.assign(existing,payload);auditLater(data,'EDIT_PRODUK',existing.name);}else{data.products.push({id:productId,...payload,active:true});auditLater(data,'TAMBAH_PRODUK',payload.name);}
+        setProductSaveStatus('Menyimpan data produk ke Firestore...','working');
+        localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(data)));
+        const synced=await withTimeout(pushCloudNow(data),30000,'Penyimpanan produk melewati batas waktu 30 detik. Periksa koneksi dan Firestore Rules.');
+        if(!synced){if(lastCloudSaveError)throw lastCloudSaveError;throw new Error('Data produk belum berhasil tersimpan online. Periksa koneksi dan Firestore Rules.');}
+        mainSaved=true;
+        if(oldImageRef&&oldImageRef!==imageRef)deleteProductImageDocument(oldImageRef).catch(err=>console.warn('Foto produk lama tidak dapat dihapus:',err));
+        setProductSaveStatus('Produk berhasil disimpan online.','success');
+        if(productPreviewObjectUrl){URL.revokeObjectURL(productPreviewObjectUrl);productPreviewObjectUrl='';}
+        renderPublic();navigateDash('products');toast(editId?'Produk diperbarui online.':'Produk ditambahkan online.');
+      }catch(err){
+        console.warn('Simpan produk gagal',err);
+        if(!mainSaved){if(createdImageRef)await deleteProductImageDocument(createdImageRef).catch(()=>{});try{localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(original)));}catch(storageErr){console.warn('Rollback cache lokal gagal:',storageErr);}}
+        let message=err?.message||'Produk belum berhasil disimpan.';
+        if(err?.code==='permission-denied'||err?.code==='firestore/permission-denied')message='Firestore menolak foto produk. Terbitkan Firestore Rules versi 41 yang menyertakan koleksi productImages.';
+        else if(err?.code==='resource-exhausted')message='Kuota gratis Firestore atau batas ukuran dokumen terlampaui. Pilih foto yang lebih kecil.';
+        setProductSaveStatus(message,'error');toast(message);
+      }finally{
+        if(submitBtn){submitBtn.disabled=false;submitBtn.textContent=editId?'Simpan Perubahan':'Simpan Produk';}
+        form.querySelectorAll('input,textarea,select').forEach(el=>el.disabled=false);
+      }
+    });
+    $$('[data-edit-product]').forEach(btn=>btn.onclick=()=>{const db=getDB(),p=db.products.find(x=>x.id===btn.dataset.editProduct),f=$('#productForm');if(!p)return;const fieldImage=(p.imageRef||String(p.image||'').startsWith('data:image/'))?'':(p.image||'');populateForm(f,p,{name:'name',category:'category',icon:'icon',spec:'spec',desc:'desc',image:fieldImage});f.elements.editId.value=p.id;$('#productFormTitle').textContent='Edit Produk';$('#saveProductBtn').textContent='Simpan Perubahan';$('#cancelEditProduct').hidden=false;setProductPreview(p.image||'',p.imageRef?'Foto produk tersimpan di Firestore':'Foto produk saat ini');setProductSaveStatus('Pilih foto baru untuk mengganti gambar, atau biarkan kosong untuk mempertahankan foto saat ini.','');f.scrollIntoView({behavior:'smooth'});});
     $('#cancelEditProduct')?.addEventListener('click',()=>navigateDash('products'));
     $$('[data-toggle-product]').forEach(btn=>btn.onclick=()=>{const db=getDB(),p=db.products.find(x=>x.id===btn.dataset.toggleProduct);p.active=!p.active;auditLater(db,'TOGGLE_PRODUK',`${p.name}: ${p.active?'tampil':'sembunyi'}`);saveDB(db);navigateDash('products');renderPublic()});
     $$('[data-del-product]').forEach(btn=>btn.onclick=()=>{if(!confirm('Hapus produk?'))return;const db=getDB(),p=db.products.find(x=>x.id===btn.dataset.delProduct);db.products=db.products.filter(x=>x.id!==btn.dataset.delProduct);auditLater(db,'HAPUS_PRODUK',p?.name||btn.dataset.delProduct);saveDB(db);navigateDash('products');renderPublic()});
