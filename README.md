@@ -56,3 +56,20 @@ Form registrasi penerima mewajibkan Serial Number yang tercantum pada pelat unit
 Catatan: identitas serial bukan pelacak GPS real-time. Arsitektur database lama masih menyimpan data publik dan pribadi dalam appData/main serta mengizinkan semua akun terautentikasi mengubah payload. Sebelum menerima data riil, pisahkan dokumen publik/pribadi dan tegakkan otorisasi administrator di Security Rules/backend.
 
 Perbaikan sinkronisasi: masuk akun tidak lagi otomatis menimpa Firestore memakai cache browser lama.
+
+
+## Pemantau Pengunjung v35
+Menambahkan counter pengunjung harian, 7 hari, bulanan, tahunan dan grafik tujuh hari di halaman utama. Admin dapat mengatur posisi kiri/kanan, judul, visibilitas, dan koreksi angka tampilan dari menu Pemantau Pengunjung. Statistik otomatis disimpan di collection Firestore `visitorDaily`; deploy `firestore.rules` v35 agar pencatatan publik berfungsi.
+
+## v36 - Pemantau Pengunjung Compact
+Widget statistik pengunjung diperkecil dan dipindahkan setelah menu akses cepat agar tidak mengganggu menu utama. Angka harian, mingguan, bulanan, tahunan dan grafik 7 hari tetap ditampilkan.
+
+## v37 - Statistik Pengunjung Khusus Admin
+Statistik pengunjung tidak lagi tampil di halaman publik. Penghitungan tetap berjalan dan data Harian, Mingguan, Bulanan, Tahunan serta grafik 7 hari hanya tersedia melalui Dashboard Admin > Pemantau Pengunjung.
+
+## v38 - Perbaikan Penyimpanan Rumah Pompa
+- Foto rumah pompa diunggah langsung ke Firebase Storage, tidak disimpan sebagai Base64 di dokumen Firestore.
+- Form menampilkan status proses, berhasil, atau gagal.
+- Perubahan kartu dikirim langsung ke Firestore dan baru ditampilkan sebagai tersimpan setelah berhasil.
+- Jika penyimpanan Firestore gagal, foto baru dibersihkan dan perubahan lokal dikembalikan.
+- Penghapusan gambar dan pemulihan kartu juga menunggu penyimpanan online berhasil.

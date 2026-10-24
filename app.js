@@ -4,6 +4,10 @@ const DBKEY = 'lms_pwa_db_v2';
 const LEGACY_DBKEY = 'lms_pwa_db_v1';
 const SESSION = 'lms_pwa_session_v2';
 const ADMIN_EMAIL = 'kalimajasuryaalam@gmail.com';
+const VISITOR_LAST_DAY_KEY = 'lms_visitor_last_day_v1';
+const DEFAULT_VISITOR_MONITOR = {enabled:false,position:'right',title:'Pemantau Pengunjung',adjustDay:0,adjustWeek:0,adjustMonth:0,adjustYear:0};
+let visitorStatsCache={day:0,week:0,month:0,year:0,days:[],loaded:false};
+let visitorStatsLoading=false;
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBOdU2TrXnhaXMMooq8RukAlYkC6D7JV-c",
@@ -103,6 +107,8 @@ async function initFirebaseOnline(){
       // Login does not overwrite Firestore with an older browser cache.
     });
     startCloudSync();
+    recordVisitor().catch(()=>{});
+    loadVisitorStats().catch(()=>{});
   }catch(err){
     console.warn('Firebase init gagal',err);
     setCloudStatus('Koneksi terganggu','error');
@@ -263,7 +269,8 @@ const seed = {
     heroBgCredit:'Latar persawahan',
     hybridCard:{...DEFAULT_HYBRID_CARD},
     houseCards:cloneHouseCards(),
-    salesAgents:[]
+    salesAgents:[],
+    visitorMonitor:{...DEFAULT_VISITOR_MONITOR}
   },
   products:[
     {id:'P001',name:'Pompa Irigasi Hybrid 6"',icon:'⚙️',category:'Pompa Hybrid',spec:'Diameter 6 inchi • Diesel 15 HP + motor listrik 7,5 kW 3-phase',desc:'Satu unit pompa irigasi hybrid diameter 6 inchi dengan dua sumber penggerak yang dapat digunakan bergantian sesuai ketersediaan energi.',active:true,image:''},
@@ -327,6 +334,9 @@ function normalizeDB(db){
   out.settings = {...out.settings,...(db.settings||{}),hybridCard:{...DEFAULT_HYBRID_CARD,...(db.settings?.hybridCard||{})}};
   out.settings.hybridCard.detailGallery=normalizeHybridGallery(out.settings.hybridCard.detailGallery);
   out.settings.salesAgents=normalizeSalesAgents(db.settings?.salesAgents);
+  out.settings.visitorMonitor={...DEFAULT_VISITOR_MONITOR,...(db.settings?.visitorMonitor||{})};
+  out.settings.visitorMonitor.position=['left','right'].includes(out.settings.visitorMonitor.position)?out.settings.visitorMonitor.position:'right';
+  ['adjustDay','adjustWeek','adjustMonth','adjustYear'].forEach(k=>out.settings.visitorMonitor[k]=Number.isFinite(Number(out.settings.visitorMonitor[k]))?Math.trunc(Number(out.settings.visitorMonitor[k])):0);
   const incomingHouses=db.settings?.houseCards||{};
   out.settings.houseCards={};
   ['open','semi','secure'].forEach(type=>{out.settings.houseCards[type]={...DEFAULT_HOUSE_CARDS[type],...(incomingHouses[type]||{})};});
@@ -487,6 +497,85 @@ function applyHeroBackground(){
   }
 }
 
+function jakartaDateParts(date=new Date()){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+  const out={};parts.forEach(p=>{if(p.type!=='literal')out[p.type]=p.value});
+  return {year:Number(out.year),month:Number(out.month),day:Number(out.day)};
+}
+function jakartaDayKey(date=new Date()){
+  const p=jakartaDateParts(date);return `${p.year}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}`;
+}
+function visitorDayKeyOffset(offset){
+  const p=jakartaDateParts();const d=new Date(Date.UTC(p.year,p.month-1,p.day+offset));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+}
+function visitorMonitorSettings(db=getDB()){
+  return {...DEFAULT_VISITOR_MONITOR,...(db.settings?.visitorMonitor||{})};
+}
+function adjustedVisitorStats(){
+  const s=visitorStatsCache,m=visitorMonitorSettings();
+  return {
+    day:Math.max(0,(s.day||0)+Number(m.adjustDay||0)),
+    week:Math.max(0,(s.week||0)+Number(m.adjustWeek||0)),
+    month:Math.max(0,(s.month||0)+Number(m.adjustMonth||0)),
+    year:Math.max(0,(s.year||0)+Number(m.adjustYear||0))
+  };
+}
+function visitorChartMarkup(days=[]){
+  const rows=days.length?days:Array.from({length:7},(_,i)=>({key:visitorDayKeyOffset(i-6),count:0}));
+  const max=Math.max(1,...rows.map(x=>Number(x.count)||0));
+  const w=420,h=128,padX=16,padTop=10,padBottom=29,gap=7,barW=(w-padX*2-gap*(rows.length-1))/rows.length;
+  const bars=rows.map((x,i)=>{
+    const value=Math.max(0,Number(x.count)||0),bh=Math.max(value?5:2,(h-padTop-padBottom)*(value/max));
+    const bx=padX+i*(barW+gap),by=h-padBottom-bh;
+    const d=new Date(`${x.key}T00:00:00+07:00`),label=new Intl.DateTimeFormat('id-ID',{weekday:'short',timeZone:'Asia/Jakarta'}).format(d).replace('.','');
+    return `<g><rect class="visitor-bar" x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="5"><title>${esc(x.key)}: ${value} pengunjung</title></rect><text class="visitor-bar-value" x="${(bx+barW/2).toFixed(1)}" y="${Math.max(9,by-4).toFixed(1)}" text-anchor="middle">${value}</text><text class="visitor-bar-label" x="${(bx+barW/2).toFixed(1)}" y="${h-8}" text-anchor="middle">${esc(label)}</text></g>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Grafik pengunjung 7 hari terakhir" preserveAspectRatio="xMidYMid meet"><line class="visitor-axis" x1="${padX}" y1="${h-padBottom}" x2="${w-padX}" y2="${h-padBottom}"/>${bars}</svg>`;
+}
+function renderVisitorMonitor(){ return; }
+async function loadVisitorStats(force=false){
+  if(visitorStatsLoading||!firebaseDb)return visitorStatsCache;
+  if(visitorStatsCache.loaded&&!force)return visitorStatsCache;
+  visitorStatsLoading=true;
+  try{
+    const today=visitorDayKeyOffset(0),weekStart=visitorDayKeyOffset(-6),p=jakartaDateParts(),yearStart=`${p.year}-01-01`,monthStart=`${p.year}-${String(p.month).padStart(2,'0')}-01`;
+    const queryStart=weekStart<yearStart?weekStart:yearStart;
+    const snap=await firebaseDb.collection('visitorDaily').where(firebase.firestore.FieldPath.documentId(),'>=',queryStart).where(firebase.firestore.FieldPath.documentId(),'<=',today).get();
+    const map={};snap.forEach(doc=>map[doc.id]=Math.max(0,Number(doc.data()?.count)||0));
+    const days=Array.from({length:7},(_,i)=>{const key=visitorDayKeyOffset(i-6);return {key,count:map[key]||0}});
+    const keys=Object.keys(map);
+    visitorStatsCache={
+      day:map[today]||0,
+      week:keys.filter(k=>k>=weekStart&&k<=today).reduce((n,k)=>n+map[k],0),
+      month:keys.filter(k=>k>=monthStart&&k<=today).reduce((n,k)=>n+map[k],0),
+      year:keys.filter(k=>k>=yearStart&&k<=today).reduce((n,k)=>n+map[k],0),
+      days,loaded:true
+    };
+    renderVisitorMonitor();
+    return visitorStatsCache;
+  }catch(err){console.warn('Statistik pengunjung belum tersedia',err);return visitorStatsCache}
+  finally{visitorStatsLoading=false}
+}
+async function recordVisitor(){
+  if(!firebaseDb||location.protocol==='file:')return false;
+  if(currentUser()?.role==='admin')return false;
+  const today=jakartaDayKey();
+  if(localStorage.getItem(VISITOR_LAST_DAY_KEY)===today){await loadVisitorStats();return false}
+  try{
+    const ref=firebaseDb.collection('visitorDaily').doc(today);
+    await firebaseDb.runTransaction(async tx=>{
+      const snap=await tx.get(ref);
+      const current=snap.exists?Math.max(0,Number(snap.data()?.count)||0):0;
+      tx.set(ref,{count:current+1,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    });
+    localStorage.setItem(VISITOR_LAST_DAY_KEY,today);
+    visitorStatsCache.loaded=false;
+    await loadVisitorStats(true);
+    return true;
+  }catch(err){console.warn('Pencatatan pengunjung gagal',err);return false}
+}
+
 function renderPublic(){
   const db=getDB();
   $('#siteName').textContent=db.settings.siteName;
@@ -497,7 +586,7 @@ function renderPublic(){
   $('#statBeneficiaries').textContent=db.beneficiaries.length;
   $('#statGroups').textContent=new Set(db.beneficiaries.map(x=>x.group).filter(Boolean)).size;
   $('#statWarranty').textContent=db.beneficiaries.filter(x=>warrantyStatus(x).label==='Aktif').length;
-  applyHeroBackground(); renderHybridHero(); renderProducts(); fillProvinceFilter(); renderCPCL(); renderHouseCards(); renderSalesDivision();
+  applyHeroBackground(); renderHybridHero(); renderProducts(); fillProvinceFilter(); renderCPCL(); renderHouseCards(); renderSalesDivision(); renderVisitorMonitor();
 }
 function renderProducts(){
   const db=getDB(), q=($('#productSearch')?.value||'').toLowerCase();
@@ -773,7 +862,7 @@ function logout(writeAudit=true){
   $('#authView').hidden=true;$('#dashboardView').hidden=true;$('#publicView').hidden=false;$('#loginBtn').hidden=false;$('#logoutBtn').hidden=true;setSidebarOpen(false);syncMobileNavigation();renderPublic();
 }
 
-const adminMenus=[['home','Ringkasan','🏠'],['hybridcard','Kartu Pompa Hybrid','🚜'],['houses','Rumah Pompa','🏠'],['beneficiaries','CPCL & Penerima','📍'],['products','Produk','⚙️'],['warranty','Garansi & Klaim','🛡️'],['users','User','👥'],['sales','Divisi Penjualan','🏢'],['settings','Website & Data','🖥️'],['audit','Aktivitas','🧾']];
+const adminMenus=[['home','Ringkasan','🏠'],['hybridcard','Kartu Pompa Hybrid','🚜'],['houses','Rumah Pompa','🏠'],['beneficiaries','CPCL & Penerima','📍'],['products','Produk','⚙️'],['warranty','Garansi & Klaim','🛡️'],['users','User','👥'],['visitors','Pemantau Pengunjung','📊'],['sales','Divisi Penjualan','🏢'],['settings','Website & Data','🖥️'],['audit','Aktivitas','🧾']];
 const userMenus=[['home','Ringkasan','🏠'],['asset','Unit Bantuan','⚙️'],['warranty','Garansi','🛡️'],['claim','Klaim & Servis','🧰'],['profile','Profil','👤']];
 function buildDashNav(role){const menus=role==='admin'?adminMenus:userMenus;$('#dashNav').innerHTML=menus.map(m=>`<button data-dash="${m[0]}">${m[2]} ${m[1]}</button>`).join('');$$('[data-dash]').forEach(b=>b.onclick=()=>navigateDash(b.dataset.dash));}
 function navigateDash(page){
@@ -785,7 +874,7 @@ function adminPage(page){
   const db=getDB();
   if(page==='home'){
     const activeW=db.beneficiaries.filter(x=>warrantyStatus(x).label==='Aktif').length, openClaims=db.claims.filter(x=>!['Selesai','Ditolak'].includes(x.status)).length;
-    return `<div class="panel sales-admin-shortcut"><div><span class="eyebrow">JARINGAN PENJUALAN</span><h3>Divisi Penjualan & Agen</h3><p>Kelola daftar PT/perusahaan, nomor WhatsApp, dan agen penjualan dari sini.</p></div><button type="button" class="primary" id="openSalesAdmin">Kelola Divisi Penjualan →</button></div><div class="kpi-grid">${kpi('CPCL',db.beneficiaries.length)}${kpi('User Aktif',db.users.filter(x=>x.status==='aktif').length)}${kpi('Garansi Aktif',activeW)}${kpi('Klaim Terbuka',openClaims)}</div>
+    return `<div class="panel visitor-admin-shortcut"><div><span class="eyebrow">STATISTIK WEBSITE</span><h3>Pemantau Pengunjung</h3><p>Lihat angka harian, mingguan, bulanan, tahunan dan grafik khusus admin.</p></div><button type="button" class="primary" id="openVisitorAdmin">Kelola Pengunjung →</button></div><div class="panel sales-admin-shortcut"><div><span class="eyebrow">JARINGAN PENJUALAN</span><h3>Divisi Penjualan & Agen</h3><p>Kelola daftar PT/perusahaan, nomor WhatsApp, dan agen penjualan dari sini.</p></div><button type="button" class="primary" id="openSalesAdmin">Kelola Divisi Penjualan →</button></div><div class="kpi-grid">${kpi('CPCL',db.beneficiaries.length)}${kpi('User Aktif',db.users.filter(x=>x.status==='aktif').length)}${kpi('Garansi Aktif',activeW)}${kpi('Klaim Terbuka',openClaims)}</div>
       <div class="grid-2"><div class="panel"><h3>Status CPCL</h3>${['Verifikasi','Siap Serah Terima','Aktif'].map(s=>`<div class="claim-item"><b>${s}</b><p>${db.beneficiaries.filter(x=>x.status===s).length} data</p></div>`).join('')}</div>
       <div class="panel"><h3>Aktivitas Terbaru</h3>${db.audit.slice(0,6).map(a=>`<div class="claim-item"><b>${esc(a.action)}</b><p>${esc(a.user)} • ${new Date(a.at).toLocaleString('id-ID')}</p></div>`).join('')||'<p class="muted">Belum ada aktivitas.</p>'}</div></div>`;
   }
@@ -831,7 +920,8 @@ function adminPage(page){
           <label>Judul Kartu<input name="title" value="${esc(c.title)}" required></label>
           <label>Deskripsi Singkat<textarea name="description" rows="3" required>${esc(c.description)}</textarea></label>
           <label>URL Foto / Gambar<input name="image" value="${esc(httpImg)}" placeholder="https://..."></label>
-          <label>Upload Foto / Gambar (maks. 900 KB)<input name="imageFile" type="file" accept="image/*"></label>
+          <label>Upload Foto / Gambar (maks. 900 KB)<input name="imageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+          <small class="muted">Foto diunggah ke Firebase Storage, sedangkan perubahan kartu disimpan ke Firestore.</small>
           ${c.image?`<button type="button" class="danger removeHouseImage" data-house-type="${type}">Hapus Gambar Saat Ini</button>`:''}
           <hr class="soft">
           <h3>Detail Saat Kartu Diklik</h3>
@@ -843,11 +933,24 @@ function adminPage(page){
           <label>Detail 4<textarea name="detail4" rows="2">${esc(c.detail4)}</textarea></label>
           <label>Detail 5<textarea name="detail5" rows="2">${esc(c.detail5)}</textarea></label>
           <label>Detail 6<textarea name="detail6" rows="2">${esc(c.detail6)}</textarea></label>
-          <div class="inline-actions"><button class="primary">Simpan ${esc(labels[type])}</button><button type="button" class="ghost previewHouseDetail" data-house-type="${type}">Lihat Detail</button><button type="button" class="ghost resetHouseCard" data-house-type="${type}">Pulihkan Tampilan Awal</button></div>
+          <div id="houseSaveStatus-${type}" class="save-status house-save-status" role="status" aria-live="polite"></div>
+          <div class="inline-actions"><button type="submit" class="primary house-save-button">Simpan ${esc(labels[type])}</button><button type="button" class="ghost previewHouseDetail" data-house-type="${type}">Lihat Detail</button><button type="button" class="ghost resetHouseCard" data-house-type="${type}">Pulihkan Tampilan Awal</button></div>
         </form>
       </div>`;
     }).join('');
     return `<div class="panel house-admin-intro"><div><span class="eyebrow">KONTROL HALAMAN DEPAN</span><h3>Editor Referensi Rumah Pompa Hybrid</h3><p class="muted">Kelola foto, informasi, dan detail tiga pilihan rumah pompa yang ditampilkan di halaman utama.</p></div></div><div class="house-admin-grid">${cards}</div>`;
+  }
+
+  if(page==='visitors'){
+    const m=visitorMonitorSettings(db),v=adjustedVisitorStats();
+    return `<div class="panel visitor-admin-intro"><span class="eyebrow">KHUSUS ADMIN</span><h3>Pemantau Pengunjung</h3><p>Statistik pengunjung hanya ditampilkan di dashboard admin. Pengunjung dihitung otomatis maksimal satu kali per browser setiap hari.</p></div>
+      <div class="kpi-grid visitor-admin-kpis">${kpi('Harian',v.day)}${kpi('Mingguan',v.week)}${kpi('Bulanan',v.month)}${kpi('Tahunan',v.year)}</div>
+      <div class="grid-2 visitor-admin-grid"><div class="panel"><h3>Koreksi Statistik</h3><form id="visitorSettingsForm" class="dash-form">
+        <p class="muted">Angka asli tetap tersimpan. Koreksi hanya menyesuaikan angka yang dilihat admin pada dashboard.</p>
+        <div class="grid-2 compact-grid"><label>Harian (+/-)<input type="number" name="adjustDay" value="${Number(m.adjustDay||0)}"></label><label>7 Hari (+/-)<input type="number" name="adjustWeek" value="${Number(m.adjustWeek||0)}"></label><label>Bulanan (+/-)<input type="number" name="adjustMonth" value="${Number(m.adjustMonth||0)}"></label><label>Tahunan (+/-)<input type="number" name="adjustYear" value="${Number(m.adjustYear||0)}"></label></div>
+        <div class="inline-actions"><button class="primary" id="saveVisitorSettings">Simpan Koreksi Online</button><button type="button" class="ghost" id="resetVisitorAdjustments">Nolkan Koreksi</button></div><div id="visitorSaveStatus" class="save-status" role="status" aria-live="polite"></div>
+      </form></div>
+      <div class="panel"><div class="panel-title-row"><h3>Grafik 7 Hari Terakhir</h3><button type="button" class="ghost" id="refreshVisitorStats">↻ Refresh</button></div><div class="visitor-admin-chart">${visitorChartMarkup(visitorStatsCache.days)}</div><p class="muted">Data otomatis: Hari ini ${visitorStatsCache.day||0} • 7 hari ${visitorStatsCache.week||0} • Bulan ${visitorStatsCache.month||0} • Tahun ${visitorStatsCache.year||0}</p></div></div>`;
   }
 
   if(page==='sales'){
@@ -966,6 +1069,22 @@ function bindDashActions(page,u){
   $('#openSalesAdmin')?.addEventListener('click',()=>navigateDash('sales'));
   $$('[data-kpi-target]').forEach(card=>{card.onclick=()=>navigateDash(card.dataset.kpiTarget);card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();navigateDash(card.dataset.kpiTarget)}}});
   if(u.role==='admin'){
+    $('#openVisitorAdmin')?.addEventListener('click',()=>navigateDash('visitors'));
+    if(page==='visitors'){
+      const form=$('#visitorSettingsForm'),status=$('#visitorSaveStatus');
+      const setStatus=(msg,kind='')=>{if(status){status.textContent=msg;status.className='save-status '+kind;}};
+      form?.addEventListener('submit',async e=>{
+        e.preventDefault();const f=new FormData(form),db=clone(getDB());
+        const old=visitorMonitorSettings(db);
+        db.settings.visitorMonitor={...old,enabled:false,adjustDay:Math.trunc(Number(f.get('adjustDay')||0)),adjustWeek:Math.trunc(Number(f.get('adjustWeek')||0)),adjustMonth:Math.trunc(Number(f.get('adjustMonth')||0)),adjustYear:Math.trunc(Number(f.get('adjustYear')||0))};
+        setStatus('Menyimpan koreksi statistik...','working');
+        const ok=await pushCloudNow(db);
+        if(!ok){setStatus('Koreksi belum dapat disimpan online.','error');return}
+        localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(db)));setStatus('Koreksi statistik tersimpan.','success');toast('Statistik pengunjung diperbarui');
+      });
+      $('#resetVisitorAdjustments')?.addEventListener('click',()=>{['adjustDay','adjustWeek','adjustMonth','adjustYear'].forEach(k=>form.elements[k].value=0);setStatus('Koreksi di-nol-kan. Tekan Simpan Pengaturan Online.','working')});
+      $('#refreshVisitorStats')?.addEventListener('click',async()=>{setStatus('Memuat statistik terbaru...','working');visitorStatsCache.loaded=false;await loadVisitorStats(true);navigateDash('visitors')});
+    }
     if(page==='sales'){
       const form=$('#salesAgentForm');
       const status=$('#salesSaveStatus');
@@ -1161,14 +1280,48 @@ function bindDashActions(page,u){
       $('#previewHybridDetail')?.addEventListener('click',()=>{const c=readHybridForm();c.detailGallery=Object.fromEntries(HYBRID_DETAIL_SECTIONS.map(({key})=>[key,[...c.detailGallery[key],...pendingGallery[key].map(x=>({url:x.previewUrl,caption:x.caption}))]]));openDetail('SISTEM POMPA HYBRID',c.detailTitle,c.detailSubtitle,hybridDetailMarkup(c,true))});
     }
 
-
     $$('.houseCardForm').forEach(form=>{
       form.addEventListener('submit',async e=>{
         e.preventDefault();
-        const type=form.dataset.houseType, data=getDB(), base=houseCardsSettings(data)[type], f=new FormData(form);
-        let image=(f.get('image')||'').trim() || base.image || '';
+        const type=form.dataset.houseType;
+        const status=$(`#houseSaveStatus-${type}`);
+        const submitBtn=form.querySelector('.house-save-button');
+        const setHouseStatus=(message,state='')=>{
+          if(status){status.textContent=message;status.className='save-status house-save-status '+state;}
+        };
+        if(!firebaseAuth?.currentUser){
+          setHouseStatus('Sesi admin berakhir. Silakan masuk kembali.','error');
+          return toast('Silakan masuk kembali sebagai admin.');
+        }
+        if(!firebaseDb||!firebaseStorage||!cloudReady){
+          setHouseStatus('Firebase belum siap. Periksa koneksi lalu coba lagi.','error');
+          return toast('Penyimpanan online belum tersambung.');
+        }
+
+        const original=getDB();
+        const data=clone(original);
+        const base=houseCardsSettings(data)[type];
+        const f=new FormData(form);
         const file=form.elements.imageFile?.files?.[0];
-        try{if(file)image=await fileToDataURL(file)}catch(err){return toast(err.message)}
+        const typedUrl=String(f.get('image')||'').trim();
+        const uploadedPaths=[];
+        let image=typedUrl || base.image || '';
+
+        if(file){
+          if(!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)){
+            setHouseStatus('Format foto harus JPEG, PNG, WebP, atau GIF.','error');
+            return toast('Format foto tidak didukung.');
+          }
+          if(!file.size || file.size > 900*1024){
+            setHouseStatus('Ukuran foto maksimal 900 KB.','error');
+            return toast('Ukuran foto maksimal 900 KB.');
+          }
+        }
+        if(typedUrl && !/^https?:\/\//i.test(typedUrl)){
+          setHouseStatus('URL gambar harus dimulai dengan https:// atau http://.','error');
+          return toast('URL gambar tidak valid.');
+        }
+
         const updated={
           ...base,
           visible:f.get('visible')==='on',
@@ -1184,24 +1337,122 @@ function bindDashActions(page,u){
           detail5:String(f.get('detail5')||'').trim(),
           detail6:String(f.get('detail6')||'').trim()
         };
-        data.settings.houseCards=data.settings.houseCards||cloneHouseCards();
-        data.settings.houseCards[type]=updated;
-        auditLater(data,'UBAH_RUMAH_POMPA',updated.title);
-        saveDB(data); renderPublic(); navigateDash('houses'); toast('Kartu rumah pompa diperbarui');
+
+        if(!updated.title || !updated.description){
+          setHouseStatus('Judul dan deskripsi wajib diisi.','error');
+          return;
+        }
+
+        if(submitBtn){submitBtn.disabled=true;submitBtn.textContent='Menyimpan...';}
+        form.querySelectorAll('button').forEach(b=>{b.disabled=true});
+        setHouseStatus(file?'Mengunggah foto ke Firebase Storage...':'Menyimpan perubahan ke Firebase...','working');
+
+        try{
+          if(file){
+            const ext=(file.name.split('.').pop()||'jpg').replace(/[^a-z0-9]/gi,'').toLowerCase()||'jpg';
+            const safeName=(file.name.replace(/[^a-z0-9._-]/gi,'-').slice(-60)||`rumah-pompa.${ext}`);
+            const path=`uploads/${firebaseAuth.currentUser.uid}/rumah-pompa/${type}/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName}`;
+            const ref=firebaseStorage.ref(path);
+            await ref.put(file,{contentType:file.type});
+            image=await ref.getDownloadURL();
+            uploadedPaths.push(ref.fullPath);
+            updated.image=image;
+            setHouseStatus('Foto berhasil diunggah. Menyimpan data kartu...','working');
+          } else if(image.startsWith('data:image/')) {
+            // Migrate a legacy inline image to Storage so Firestore does not discard it.
+            const response=await fetch(image);
+            const blob=await response.blob();
+            if(!blob.size || blob.size > 900*1024) throw new Error('Foto lama lebih besar dari 900 KB. Unggah ulang foto dengan ukuran lebih kecil.');
+            const ext=(blob.type.split('/')[1]||'jpeg').replace(/[^a-z0-9]/gi,'')||'jpeg';
+            const path=`uploads/${firebaseAuth.currentUser.uid}/rumah-pompa/${type}/${Date.now()}-migrated.${ext}`;
+            const ref=firebaseStorage.ref(path);
+            await ref.put(blob,{contentType:blob.type||'image/jpeg'});
+            image=await ref.getDownloadURL();
+            uploadedPaths.push(ref.fullPath);
+            updated.image=image;
+          }
+
+          data.settings.houseCards=data.settings.houseCards||cloneHouseCards();
+          data.settings.houseCards[type]=updated;
+          auditLater(data,'UBAH_RUMAH_POMPA',updated.title);
+
+          setHouseStatus('Menyimpan perubahan ke Firebase...','working');
+          const synced=await pushCloudNow(data);
+          if(!synced) throw new Error('house-cloud-save-failed');
+
+          localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(data)));
+          setHouseStatus('Berhasil disimpan online.','success');
+          toast('Rumah pompa berhasil disimpan online.');
+          renderPublic();
+          setTimeout(()=>navigateDash('houses'),450);
+
+          // Remove old uploaded image only after the new URL has been saved successfully.
+          const oldImage=base.image;
+          if(oldImage && oldImage!==updated.image && /^https:\/\//i.test(oldImage)){
+            try{
+              const oldRef=firebaseStorage.refFromURL(oldImage);
+              if(oldRef.fullPath.startsWith(`uploads/${firebaseAuth.currentUser.uid}/rumah-pompa/`)) await oldRef.delete();
+            }catch(err){console.warn('Gambar rumah pompa lama belum terhapus:',err)}
+          }
+        }catch(err){
+          console.warn('Simpan rumah pompa gagal',err);
+          await Promise.all(uploadedPaths.map(path=>firebaseStorage.ref(path).delete().catch(()=>{})));
+          localStorage.setItem(DBKEY,JSON.stringify(original));
+          let message='Perubahan rumah pompa belum tersimpan.';
+          if(err?.code==='storage/unauthorized') message='Firebase Storage menolak unggahan. Periksa Storage Rules dan pastikan login admin aktif.';
+          else if(err?.code==='storage/quota-exceeded') message='Kuota Firebase Storage tidak mencukupi.';
+          else if(err?.code==='storage/retry-limit-exceeded') message='Koneksi terputus saat mengunggah. Periksa internet lalu coba lagi.';
+          else if(err?.code==='storage/invalid-format') message='Format foto tidak didukung.';
+          else if(err?.message && err.message!=='house-cloud-save-failed') message=err.message;
+          else if(err?.message==='house-cloud-save-failed') message='Foto berhasil diunggah, tetapi data gagal disimpan ke Firestore. Periksa Firestore Rules dan ukuran dokumen.';
+          setHouseStatus(message,'error');
+          toast(message);
+        }finally{
+          form.querySelectorAll('button').forEach(b=>{b.disabled=false});
+          if(submitBtn)submitBtn.textContent='Simpan '+({open:'Tipe Terbuka',semi:'Tipe Semi Tertutup',secure:'Tipe Aman / Terkunci'}[type]||'Rumah Pompa');
+        }
       });
     });
-    $$('.removeHouseImage').forEach(btn=>btn.addEventListener('click',()=>{
-      const type=btn.dataset.houseType, data=getDB();
+    $$('.removeHouseImage').forEach(btn=>btn.addEventListener('click',async()=>{
+      const type=btn.dataset.houseType;
+      if(!firebaseAuth?.currentUser||!firebaseDb||!cloudReady)return toast('Masuk sebagai admin dan periksa koneksi Firebase.');
+      const original=getDB(),data=clone(original),oldImage=houseCardsSettings(data)[type].image;
       data.settings.houseCards=data.settings.houseCards||cloneHouseCards();
       data.settings.houseCards[type]={...houseCardsSettings(data)[type],image:''};
       auditLater(data,'HAPUS_GAMBAR_RUMAH_POMPA',type);
-      saveDB(data);renderPublic();navigateDash('houses');toast('Gambar rumah pompa dihapus');
+      btn.disabled=true;btn.textContent='Menghapus...';
+      const status=$(`#houseSaveStatus-${type}`);
+      if(status){status.textContent='Menyimpan penghapusan gambar...';status.className='save-status house-save-status working';}
+      try{
+        if(!await pushCloudNow(data))throw new Error('house-cloud-save-failed');
+        localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(data)));
+        if(oldImage&&/^https:\/\//i.test(oldImage)){
+          try{const ref=firebaseStorage.refFromURL(oldImage);if(ref.fullPath.startsWith(`uploads/${firebaseAuth.currentUser.uid}/rumah-pompa/`))await ref.delete()}catch(err){console.warn('Gambar lama tidak dapat dihapus dari Storage:',err)}
+        }
+        renderPublic();navigateDash('houses');toast('Gambar rumah pompa berhasil dihapus.');
+      }catch(err){
+        localStorage.setItem(DBKEY,JSON.stringify(original));
+        if(status){status.textContent='Gambar belum dihapus. Periksa koneksi dan Firestore Rules.';status.className='save-status house-save-status error';}
+        toast('Penghapusan gambar gagal disimpan online.');
+      }finally{btn.disabled=false;btn.textContent='Hapus Gambar Saat Ini';}
     }));
-    $$('.resetHouseCard').forEach(btn=>btn.addEventListener('click',()=>{
+    $$('.resetHouseCard').forEach(btn=>btn.addEventListener('click',async()=>{
       const type=btn.dataset.houseType;if(!confirm('Kembalikan kartu rumah pompa ini ke pengaturan awal?'))return;
-      const data=getDB();data.settings.houseCards=data.settings.houseCards||cloneHouseCards();
+      if(!firebaseAuth?.currentUser||!firebaseDb||!cloudReady)return toast('Masuk sebagai admin dan periksa koneksi Firebase.');
+      const original=getDB(),data=clone(original),oldImage=houseCardsSettings(data)[type].image;
+      data.settings.houseCards=data.settings.houseCards||cloneHouseCards();
       data.settings.houseCards[type]={...DEFAULT_HOUSE_CARDS[type]};
-      auditLater(data,'RESET_RUMAH_POMPA',type);saveDB(data);renderPublic();navigateDash('houses');toast('Kartu dikembalikan ke default');
+      auditLater(data,'RESET_RUMAH_POMPA',type);
+      btn.disabled=true;btn.textContent='Memulihkan...';
+      try{
+        if(!await pushCloudNow(data))throw new Error('house-cloud-save-failed');
+        localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(data)));
+        if(oldImage&&/^https:\/\//i.test(oldImage)){
+          try{const ref=firebaseStorage.refFromURL(oldImage);if(ref.fullPath.startsWith(`uploads/${firebaseAuth.currentUser.uid}/rumah-pompa/`))await ref.delete()}catch(err){console.warn('Gambar lama tidak dapat dihapus dari Storage:',err)}
+        }
+        renderPublic();navigateDash('houses');toast('Kartu rumah pompa berhasil dipulihkan.');
+      }catch(err){localStorage.setItem(DBKEY,JSON.stringify(original));toast('Pemulihan belum tersimpan online.')}
+      finally{btn.disabled=false;btn.textContent='Pulihkan Tampilan Awal';}
     }));
     $$('.previewHouseDetail').forEach(btn=>btn.addEventListener('click',()=>{
       const type=btn.dataset.houseType, form=$(`.houseCardForm[data-house-type="${type}"]`), f=new FormData(form), base=houseCardsSettings()[type];
@@ -1454,6 +1705,6 @@ function bind(){
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('#installBtn').hidden=false});
 $('#installBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$('#installBtn').hidden=true});
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=34',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js?v=35',{updateViaCache:'none'}).catch(()=>{}));
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#detailView').hidden)closeDetail();else if(!$('#authView').hidden)closeAuth()}});
 bind();renderPublic();syncMobileNavigation();initFirebaseOnline();if(currentUser())showDashboard();

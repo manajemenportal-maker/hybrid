@@ -30,6 +30,27 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+
+
+    // Statistik pengunjung publik. Setiap penulisan hanya boleh menaikkan counter 1 angka.
+    // Aplikasi membatasi satu hit per browser per hari melalui localStorage.
+    match /visitorDaily/{day} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasOnly(['count', 'updatedAt'])
+                    && request.resource.data.keys().hasAll(['count', 'updatedAt'])
+                    && request.resource.data.count == 1
+                    && request.resource.data.updatedAt == request.time;
+
+      allow update: if request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['count', 'updatedAt'])
+                    && request.resource.data.keys().hasOnly(['count', 'updatedAt'])
+                    && request.resource.data.count == resource.data.count + 1
+                    && request.resource.data.updatedAt == request.time;
+
+      allow delete: if false;
+    }
+
     // Semua collection/document lain ditutup secara default.
     match /{document=**} {
       allow read, write: if false;

@@ -487,3 +487,130 @@ button,a{-webkit-tap-highlight-color:transparent}
 #regGetGPS{width:100%;font-size:12px;font-weight:800;min-height:42px}#regGetGPS:disabled{opacity:.55;cursor:wait}
 .serial-filter{min-width:215px;max-width:280px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:12px}
 @media(max-width:620px){.serial-filter{min-width:0;max-width:none;flex:1 1 100%;width:100%}.serial-lookup{padding:12px}.reg-location-box{padding:12px}}
+
+
+/* Pemantau Pengunjung v35 */
+.visitor-monitor-wrap{max-width:1240px;margin:-18px auto 24px;padding:0 4vw;display:flex;position:relative;z-index:4}
+.visitor-monitor-wrap[hidden]{display:none!important}
+.visitor-monitor-wrap.visitor-right{justify-content:flex-end}.visitor-monitor-wrap.visitor-left{justify-content:flex-start}
+.visitor-monitor-card{width:min(510px,100%);background:rgba(255,255,255,.94);border:1px solid rgba(15,107,59,.14);border-radius:23px;padding:18px;box-shadow:0 18px 44px rgba(17,65,42,.10);backdrop-filter:blur(12px)}
+.visitor-monitor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.visitor-monitor-head h2{font-size:20px;margin:2px 0 0;letter-spacing:-.025em}.visitor-monitor-eyebrow{font-size:9px;letter-spacing:.16em;font-weight:900;color:var(--green)}
+.visitor-live{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:850;color:#137442;background:#ecf8f0;border-radius:999px;padding:6px 9px}.visitor-live i{width:7px;height:7px;background:#20b76a;border-radius:50%;box-shadow:0 0 0 4px rgba(32,183,106,.10)}
+.visitor-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.visitor-kpis>div{min-width:0;background:#f5faf6;border:1px solid #e1eee4;border-radius:14px;padding:11px 8px;text-align:center}.visitor-kpis b{display:block;font-size:21px;line-height:1;color:#123d2b;overflow-wrap:anywhere}.visitor-kpis span{display:block;font-size:9px;color:#63766b;margin-top:6px;font-weight:750}
+.visitor-chart-shell{border-top:1px solid #edf2ee;padding-top:11px}.visitor-chart-title{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:11px;font-weight:850;color:#284b39}.visitor-chart-title small{color:#718078;font-weight:700}.visitor-chart{height:128px;margin-top:4px}.visitor-chart svg{display:block;width:100%;height:100%;overflow:visible}.visitor-axis{stroke:#dfe9e2;stroke-width:1}.visitor-bar{fill:#0f7a47}.visitor-bar-value{fill:#355846;font-size:9px;font-weight:800}.visitor-bar-label{fill:#728078;font-size:9px;font-weight:700}.visitor-monitor-note{display:block;margin-top:7px;color:#7a8981;font-size:9px}
+.visitor-admin-shortcut{display:flex;align-items:center;justify-content:space-between;gap:16px}.visitor-admin-shortcut h3{margin:4px 0}.visitor-admin-shortcut p{margin:0;color:var(--muted)}.visitor-admin-intro h3{margin:5px 0 4px}.visitor-admin-intro p{margin:0;color:var(--muted)}.visitor-admin-chart{height:210px}.visitor-admin-chart svg{width:100%;height:100%;display:block}.visitor-admin-kpis .kpi{cursor:default}.visitor-admin-grid h4{margin:18px 0 4px}
+@media(max-width:700px){.visitor-monitor-wrap{margin:10px auto 14px;padding:0 13px}.visitor-monitor-wrap.visitor-right,.visitor-monitor-wrap.visitor-left{justify-content:stretch}.visitor-monitor-card{width:100%;padding:14px;border-radius:18px}.visitor-monitor-head h2{font-size:17px}.visitor-kpis{gap:6px;margin:12px 0}.visitor-kpis>div{padding:10px 5px;border-radius:12px}.visitor-kpis b{font-size:18px}.visitor-chart{height:112px}.visitor-admin-shortcut{align-items:stretch;flex-direction:column}.visitor-admin-shortcut button{width:100%}.visitor-admin-chart{height:170px}}
+@media(max-width:360px){.visitor-kpis{grid-template-columns:repeat(2,1fr)}.visitor-monitor-card{padding:12px}}
+
+
+/* v36 - Pemantau Pengunjung compact: tidak mengganggu menu utama */
+.visitor-monitor-wrap{
+  max-width:1240px;
+  margin:10px auto 18px;
+  padding:0 4vw;
+  display:flex;
+  position:relative;
+  z-index:4;
+}
+.visitor-monitor-wrap.visitor-right{justify-content:flex-end}
+.visitor-monitor-wrap.visitor-left{justify-content:flex-start}
+.visitor-monitor-card{
+  width:min(355px,100%);
+  padding:11px 12px;
+  border-radius:16px;
+  box-shadow:0 8px 22px rgba(17,65,42,.07);
+  background:rgba(255,255,255,.91);
+}
+.visitor-monitor-head{align-items:center;gap:8px}
+.visitor-monitor-head h2{
+  font-size:14px;
+  margin:0;
+  line-height:1.2;
+  letter-spacing:-.015em;
+}
+.visitor-live{
+  font-size:8px;
+  gap:4px;
+  padding:4px 7px;
+}
+.visitor-live i{
+  width:5px;
+  height:5px;
+  box-shadow:0 0 0 3px rgba(32,183,106,.08);
+}
+.visitor-kpis{
+  gap:5px;
+  margin:8px 0 7px;
+}
+.visitor-kpis>div{
+  padding:7px 4px 6px;
+  border-radius:10px;
+  background:rgba(245,250,246,.82);
+}
+.visitor-kpis b{
+  font-size:15px;
+  line-height:1;
+}
+.visitor-kpis span{
+  font-size:7.5px;
+  margin-top:4px;
+}
+.visitor-chart-shell{
+  padding-top:7px;
+}
+.visitor-chart-title{
+  font-size:9px;
+  gap:6px;
+}
+.visitor-chart-title small{
+  font-size:8px;
+}
+.visitor-chart{
+  height:68px;
+  margin-top:1px;
+}
+.visitor-bar-value,
+.visitor-bar-label{
+  font-size:8px;
+}
+.visitor-monitor-note{
+  margin-top:2px;
+  font-size:7.5px;
+  text-align:right;
+}
+@media(max-width:700px){
+  .visitor-monitor-wrap{
+    margin:8px auto 12px;
+    padding:0 12px;
+  }
+  .visitor-monitor-card{
+    width:100%;
+    max-width:340px;
+    padding:9px 10px;
+    border-radius:14px;
+  }
+  .visitor-monitor-wrap.visitor-right{justify-content:flex-end}
+  .visitor-monitor-wrap.visitor-left{justify-content:flex-start}
+  .visitor-monitor-head h2{font-size:13px}
+  .visitor-kpis{margin:7px 0 6px;gap:4px}
+  .visitor-kpis>div{padding:6px 3px}
+  .visitor-kpis b{font-size:14px}
+  .visitor-kpis span{font-size:7px}
+  .visitor-chart{height:58px}
+  .visitor-monitor-note{display:none}
+}
+@media(max-width:390px){
+  .visitor-monitor-card{max-width:none}
+  .visitor-chart{height:54px}
+}
+
+/* v37: statistik pengunjung hanya tersedia di dashboard admin */
+#visitorMonitorSection{display:none!important}
+
+
+/* v38 - status simpan rumah pompa */
+.house-save-status{margin:8px 0 4px;min-height:18px;font-size:13px}
+.house-save-status.working{color:#8a5a00}
+.house-save-status.success{color:#14733f}
+.house-save-status.error{color:#b42318}
+.house-save-button:disabled{opacity:.7;cursor:wait}
