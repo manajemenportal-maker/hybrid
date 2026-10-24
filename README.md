@@ -73,3 +73,20 @@ Statistik pengunjung tidak lagi tampil di halaman publik. Penghitungan tetap ber
 - Perubahan kartu dikirim langsung ke Firestore dan baru ditampilkan sebagai tersimpan setelah berhasil.
 - Jika penyimpanan Firestore gagal, foto baru dibersihkan dan perubahan lokal dikembalikan.
 - Penghapusan gambar dan pemulihan kartu juga menunggu penyimpanan online berhasil.
+
+
+## v39 - Perbaikan Simpan Rumah Pompa yang Menggantung
+- Unggah foto menampilkan persentase progres dan otomatis dibatalkan jika tidak selesai dalam 45 detik.
+- Simpan data kartu memiliki batas waktu 30 detik, sehingga tombol tidak terus berada pada status menyimpan tanpa batas.
+- Pesan kesalahan lebih spesifik untuk Storage Rules, sesi login, bucket Storage yang belum tersedia, koneksi, dan Firestore.
+- Versi cache PWA dinaikkan ke v39 agar browser mengambil kode terbaru.
+
+Catatan: batas waktu membuat aplikasi tidak menggantung, tetapi tidak otomatis mengaktifkan Firebase Storage atau menerbitkan Rules. Jika muncul pesan tentang bucket/rules, aktifkan Firebase Storage pada project `hybrid-cbb57` dan terbitkan file `storage.rules` dari paket ini melalui Firebase Console atau Firebase CLI.
+
+
+## v40 - Simpan Foto Rumah Pompa Tanpa Firebase Storage
+- Foto rumah pompa dikompres otomatis menjadi JPEG ringan (maksimal sekitar 450 KB) dan disimpan pada dokumen terpisah di Cloud Firestore.
+- Menu Rumah Pompa tidak lagi memanggil Firebase Storage, sehingga tidak memerlukan bucket Storage untuk menyimpan foto pada menu ini.
+- `firestore.rules` kini menambahkan koleksi `houseImages`: foto dapat dibaca publik, sedangkan penulisan/penghapusan dibatasi ke email admin `kalimajasuryaalam@gmail.com`.
+- Perlu menerbitkan `firestore.rules` versi 40 melalui Firebase Console > Firestore Database > Rules. Tidak perlu menerbitkan Storage Rules untuk fitur foto Rumah Pompa.
+- Kuota Firestore Spark tetap berlaku; hindari foto berukuran besar dan perhatikan kuota gratis project.

@@ -51,6 +51,25 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Foto referensi rumah pompa disimpan sebagai dokumen terpisah
+    // agar menu ini tetap bekerja pada paket Firebase Spark tanpa Storage.
+    // Foto dikompres oleh aplikasi dan dibatasi agar tiap dokumen tetap kecil.
+    match /houseImages/{imageId} {
+      allow read: if true;
+
+      allow create, update: if request.auth != null
+                            && request.auth.token.email == 'kalimajasuryaalam@gmail.com'
+                            && request.resource.data.keys().hasOnly(['data', 'contentType', 'updatedAt'])
+                            && request.resource.data.keys().hasAll(['data', 'contentType', 'updatedAt'])
+                            && request.resource.data.data is string
+                            && request.resource.data.data.size() <= 500000
+                            && request.resource.data.contentType == 'image/jpeg'
+                            && request.resource.data.updatedAt == request.time;
+
+      allow delete: if request.auth != null
+                    && request.auth.token.email == 'kalimajasuryaalam@gmail.com';
+    }
+
     // Semua collection/document lain ditutup secara default.
     match /{document=**} {
       allow read, write: if false;

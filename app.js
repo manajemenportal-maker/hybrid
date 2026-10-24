@@ -19,7 +19,7 @@ const FIREBASE_CONFIG = {
   measurementId: "G-K86KZZ8027"
 };
 let firebaseApp=null, firebaseDb=null, firebaseAuth=null, firebaseStorage=null;
-let cloudReady=false, cloudApplying=false, cloudPushTimer=null, cloudUnsubscribe=null, cloudSnapshotLoaded=false, registrationInFlight=false;
+let cloudReady=false, cloudApplying=false, cloudPushTimer=null, cloudUnsubscribe=null, cloudSnapshotLoaded=false, registrationInFlight=false, cloudSnapshotVersion=0, lastCloudSaveError=null;
 
 function setCloudStatus(label,state=''){
   const el=document.querySelector('#cloudStatus'); if(!el)return;
@@ -30,6 +30,8 @@ function sanitizeForCloud(db){
   if(x.settings?.heroBgImage===EMBEDDED_HERO_BG) x.settings.heroBgImage='__EMBEDDED_HERO__';
   if(x.settings?.hybridCard?.image===EMBEDDED_PUMP_BG) x.settings.hybridCard.image='__EMBEDDED_PUMP__';
   if(Array.isArray(x.users)) x.users=x.users.map(u=>{const y={...u};delete y.password;return y});
+  // Rumah pompa stores compressed images in separate Firestore documents, not Storage.
+  if(x.settings?.houseCards){['open','semi','secure'].forEach(type=>{const card=x.settings.houseCards[type];if(card?.imageRef)card.image=`__FIRESTORE_IMAGE__:${card.imageRef}`;});}
   const scrub=v=>{
     if(Array.isArray(v)) return v.map(scrub);
     if(v&&typeof v==='object'){Object.keys(v).forEach(k=>v[k]=scrub(v[k]));return v}
@@ -46,6 +48,7 @@ function hydrateFromCloud(db){
 }
 async function pushCloudNow(db){
   if(registrationInFlight||!cloudReady||!firebaseDb||!firebaseAuth?.currentUser)return false;
+  lastCloudSaveError=null;
   try{
     const payload=sanitizeForCloud(db);
     await firebaseDb.collection('appData').doc('main').set({
@@ -55,10 +58,118 @@ async function pushCloudNow(db){
     setCloudStatus('Online','online');
     return true;
   }catch(err){
+    lastCloudSaveError=err;
     console.warn('Cloud save gagal',err);
     setCloudStatus('Sinkronisasi gagal','error');
     return false;
   }
+}
+
+// Upload helper with progress and a hard timeout, so a stalled Storage request
+// cannot leave the admin form disabled indefinitely.
+function uploadStorageFileWithTimeout(ref,file,{timeoutMs=45000,onProgress=()=>{},onUploaded=()=>{}}={}){
+  return new Promise((resolve,reject)=>{
+    let task=null,timer=null,settled=false;
+    const finish=(fn,value)=>{
+      if(settled)return;
+      settled=true;
+      if(timer)clearTimeout(timer);
+      fn(value);
+    };
+    try{task=ref.put(file,{contentType:file.type||'image/jpeg'});}
+    catch(err){finish(reject,err);return;}
+    timer=setTimeout(()=>{
+      const err=new Error('Unggah foto tidak selesai dalam 45 detik. Periksa koneksi internet, pastikan Firebase Storage sudah diaktifkan, lalu terbitkan Storage Rules terbaru.');
+      err.code='storage/timeout';
+      finish(reject,err);
+      try{task.cancel();}catch(cancelErr){console.warn('Upload timeout; pembatalan tugas tidak berhasil:',cancelErr)}
+    },timeoutMs);
+    try{
+      task.on('state_changed',snapshot=>{
+        if(snapshot.totalBytes>0){
+          try{onProgress(Math.min(100,Math.round(snapshot.bytesTransferred/snapshot.totalBytes*100)));}catch(e){}
+        }
+      },err=>finish(reject,err),async()=>{
+        try{
+          const snapshot=task.snapshot;
+          try{onUploaded(snapshot.ref.fullPath);}catch(e){}
+          const url=await snapshot.ref.getDownloadURL();
+          finish(resolve,{url,fullPath:snapshot.ref.fullPath});
+        }catch(err){finish(reject,err)}
+      });
+    }catch(err){finish(reject,err)}
+  });
+}
+function withTimeout(promise,timeoutMs,message){
+  return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{
+      const err=new Error(message);err.code='app/timeout';reject(err);
+    },timeoutMs);
+    Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},err=>{clearTimeout(timer);reject(err)});
+  });
+}
+async function compressHouseImageToDataUrl(file,maxChars=450000){
+  if(!file)throw new Error('Foto belum dipilih.');
+  const objectUrl=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((resolve,reject)=>{
+      const image=new Image();
+      image.onload=()=>resolve(image);
+      image.onerror=()=>reject(new Error('Foto tidak dapat dibaca. Pilih foto JPEG, PNG, WebP, atau GIF yang lain.'));
+      image.src=objectUrl;
+    });
+    const naturalW=img.naturalWidth||img.width,naturalH=img.naturalHeight||img.height;
+    if(!naturalW||!naturalH)throw new Error('Dimensi foto tidak valid.');
+    let scale=Math.min(1,1400/Math.max(naturalW,naturalH));
+    const qualities=[0.82,0.74,0.66,0.58,0.50,0.42];
+    for(let attempt=0;attempt<18;attempt++){
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(naturalW*scale));
+      canvas.height=Math.max(1,Math.round(naturalH*scale));
+      const ctx=canvas.getContext('2d');
+      if(!ctx)throw new Error('Browser tidak mendukung kompresi foto.');
+      ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      for(const quality of qualities){
+        const dataUrl=canvas.toDataURL('image/jpeg',quality);
+        if(dataUrl.length<=maxChars)return dataUrl;
+      }
+      scale*=0.82;
+    }
+    throw new Error('Foto belum dapat diperkecil ke ukuran aman untuk Firestore gratis. Pilih foto yang lebih kecil.');
+  }finally{URL.revokeObjectURL(objectUrl);}
+}
+function newHouseImageDocId(type){return `house_${type}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;}
+async function saveHouseImageDocument(imageId,dataUrl){
+  if(!firebaseDb||!cloudReady||!firebaseAuth?.currentUser)throw new Error('Firestore belum siap. Login kembali sebagai admin.');
+  await withTimeout(firebaseDb.collection('houseImages').doc(imageId).set({
+    data:dataUrl,
+    contentType:'image/jpeg',
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }),30000,'Penyimpanan foto ke Firestore melewati batas waktu 30 detik. Periksa koneksi dan Firestore Rules.');
+}
+async function deleteHouseImageDocument(imageId){
+  if(!imageId||!firebaseDb||!firebaseAuth?.currentUser)return;
+  await firebaseDb.collection('houseImages').doc(imageId).delete();
+}
+async function hydrateCloudHouseImages(db){
+  const x=JSON.parse(JSON.stringify(db||{}));
+  const cards=x.settings?.houseCards;
+  if(!cards||!firebaseDb)return x;
+  for(const type of ['open','semi','secure']){
+    const card=cards[type];if(!card)continue;
+    const marker=String(card.image||'').match(/^__FIRESTORE_IMAGE__:(.+)$/);
+    const imageId=card.imageRef||(marker&&marker[1]);
+    if(!imageId)continue;
+    try{
+      const snap=await firebaseDb.collection('houseImages').doc(imageId).get();
+      card.image=snap.exists&&typeof snap.data()?.data==='string'?snap.data().data:'';
+      card.imageRef=imageId;
+    }catch(err){
+      console.warn('Foto rumah pompa tidak dapat dibaca dari Firestore:',type,err);
+      card.image='';card.imageRef=imageId;
+    }
+  }
+  return x;
 }
 function scheduleCloudSave(db){
   if(cloudApplying||registrationInFlight||!cloudReady||!firebaseAuth?.currentUser)return;
@@ -68,7 +179,8 @@ function scheduleCloudSave(db){
 }
 function startCloudSync(){
   if(!firebaseDb||cloudUnsubscribe)return;
-  cloudUnsubscribe=firebaseDb.collection('appData').doc('main').onSnapshot(snap=>{
+  cloudUnsubscribe=firebaseDb.collection('appData').doc('main').onSnapshot(async snap=>{
+    const version=++cloudSnapshotVersion;
     if(!snap.exists){
       cloudSnapshotLoaded=true;
       setCloudStatus(firebaseAuth?.currentUser?'Online':'Terhubung','online');
@@ -79,16 +191,25 @@ function startCloudSync(){
     if(!remote)return;
     if(registrationInFlight)return;
     cloudApplying=true;
-    const hydrated=normalizeDB(hydrateFromCloud(remote));
-    localStorage.setItem(DBKEY,JSON.stringify(hydrated));
-    cloudApplying=false;
-    cloudSnapshotLoaded=true;
-    setCloudStatus('Online','online');
-    renderPublic();
-    if($('#regSerial')?.value)updateRegSerialLookup();
-    if(currentUser()&&!document.querySelector('#dashboardView')?.hidden) navigateDash(currentDashPage||'home');
+    try{
+      const base=hydrateFromCloud(remote);
+      const withImages=await hydrateCloudHouseImages(base);
+      if(version!==cloudSnapshotVersion)return;
+      const hydrated=normalizeDB(withImages);
+      localStorage.setItem(DBKEY,JSON.stringify(hydrated));
+      cloudApplying=false;
+      cloudSnapshotLoaded=true;
+      setCloudStatus('Online','online');
+      renderPublic();
+      if($('#regSerial')?.value)updateRegSerialLookup();
+      if(currentUser()&&!document.querySelector('#dashboardView')?.hidden)navigateDash(currentDashPage||'home');
+    }catch(err){
+      console.warn('Hydrasi data cloud gagal',err);
+      if(version===cloudSnapshotVersion)cloudApplying=false;
+    }
   },err=>{
     console.warn('Cloud sync gagal',err);
+    cloudApplying=false;
     setCloudStatus('Offline','error');
   });
 }
@@ -216,6 +337,7 @@ const DEFAULT_HOUSE_CARDS = {
     title:'Tipe Terbuka',
     description:'Cocok untuk lokasi aman, ventilasi maksimal, akses servis mudah dan biaya struktur lebih ringan.',
     image:'',
+    imageRef:'',
     detailTitle:'Rumah Pompa Tipe Terbuka',
     detailSubtitle:'Akses servis paling mudah dengan perlindungan dasar terhadap cuaca.',
     detail1:'Atap pelindung dengan sisi terbuka untuk ventilasi alami dan akses teknisi.',
@@ -230,6 +352,7 @@ const DEFAULT_HOUSE_CARDS = {
     title:'Tipe Semi Tertutup',
     description:'Melindungi unit dari hujan langsung, tetap memiliki ventilasi dan ruang kerja teknisi.',
     image:'',
+    imageRef:'',
     detailTitle:'Rumah Pompa Tipe Semi Tertutup',
     detailSubtitle:'Kompromi antara perlindungan aset, ventilasi, dan kemudahan perawatan.',
     detail1:'Sebagian sisi ditutup untuk menahan hujan/angin langsung, sementara bukaan ventilasi tetap dipertahankan.',
@@ -244,6 +367,7 @@ const DEFAULT_HOUSE_CARDS = {
     title:'Tipe Aman / Terkunci',
     description:'Untuk aset proyek bernilai tinggi. Pintu terkunci, kisi ventilasi, area panel dipisahkan dari area mesin.',
     image:'',
+    imageRef:'',
     detailTitle:'Rumah Pompa Tipe Aman / Terkunci',
     detailSubtitle:'Perlindungan aset lebih tinggi untuk lokasi proyek yang membutuhkan pengamanan.',
     detail1:'Bangunan dapat dikunci dengan ventilasi permanen dan akses terkontrol untuk operator/teknisi.',
@@ -921,7 +1045,7 @@ function adminPage(page){
           <label>Deskripsi Singkat<textarea name="description" rows="3" required>${esc(c.description)}</textarea></label>
           <label>URL Foto / Gambar<input name="image" value="${esc(httpImg)}" placeholder="https://..."></label>
           <label>Upload Foto / Gambar (maks. 900 KB)<input name="imageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
-          <small class="muted">Foto diunggah ke Firebase Storage, sedangkan perubahan kartu disimpan ke Firestore.</small>
+          <small class="muted">Foto otomatis dikompres dan disimpan di Firestore (tanpa Firebase Storage). Batas foto setelah kompresi sekitar 450 KB.</small>
           ${c.image?`<button type="button" class="danger removeHouseImage" data-house-type="${type}">Hapus Gambar Saat Ini</button>`:''}
           <hr class="soft">
           <h3>Detail Saat Kartu Diklik</h3>
@@ -1293,8 +1417,8 @@ function bindDashActions(page,u){
           setHouseStatus('Sesi admin berakhir. Silakan masuk kembali.','error');
           return toast('Silakan masuk kembali sebagai admin.');
         }
-        if(!firebaseDb||!firebaseStorage||!cloudReady){
-          setHouseStatus('Firebase belum siap. Periksa koneksi lalu coba lagi.','error');
+        if(!firebaseDb||!cloudReady){
+          setHouseStatus('Firestore belum siap. Periksa koneksi lalu coba lagi.','error');
           return toast('Penyimpanan online belum tersambung.');
         }
 
@@ -1304,8 +1428,10 @@ function bindDashActions(page,u){
         const f=new FormData(form);
         const file=form.elements.imageFile?.files?.[0];
         const typedUrl=String(f.get('image')||'').trim();
-        const uploadedPaths=[];
+        const createdImageRefs=[];
         let image=typedUrl || base.image || '';
+        let imageRef=typedUrl ? '' : (base.imageRef||'');
+        let mainSaveAttempted=false;
 
         if(file){
           if(!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)){
@@ -1313,7 +1439,7 @@ function bindDashActions(page,u){
             return toast('Format foto tidak didukung.');
           }
           if(!file.size || file.size > 900*1024){
-            setHouseStatus('Ukuran foto maksimal 900 KB.','error');
+            setHouseStatus('Ukuran foto sebelum kompresi maksimal 900 KB.','error');
             return toast('Ukuran foto maksimal 900 KB.');
           }
         }
@@ -1328,6 +1454,7 @@ function bindDashActions(page,u){
           title:String(f.get('title')||'').trim(),
           description:String(f.get('description')||'').trim(),
           image,
+          imageRef,
           detailTitle:String(f.get('detailTitle')||'').trim(),
           detailSubtitle:String(f.get('detailSubtitle')||'').trim(),
           detail1:String(f.get('detail1')||'').trim(),
@@ -1345,66 +1472,63 @@ function bindDashActions(page,u){
 
         if(submitBtn){submitBtn.disabled=true;submitBtn.textContent='Menyimpan...';}
         form.querySelectorAll('button').forEach(b=>{b.disabled=true});
-        setHouseStatus(file?'Mengunggah foto ke Firebase Storage...':'Menyimpan perubahan ke Firebase...','working');
+        setHouseStatus(file?'Mengompres foto agar tetap gratis...':'Menyimpan perubahan ke Firestore...','working');
 
         try{
-          if(file){
-            const ext=(file.name.split('.').pop()||'jpg').replace(/[^a-z0-9]/gi,'').toLowerCase()||'jpg';
-            const safeName=(file.name.replace(/[^a-z0-9._-]/gi,'-').slice(-60)||`rumah-pompa.${ext}`);
-            const path=`uploads/${firebaseAuth.currentUser.uid}/rumah-pompa/${type}/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName}`;
-            const ref=firebaseStorage.ref(path);
-            await ref.put(file,{contentType:file.type});
-            image=await ref.getDownloadURL();
-            uploadedPaths.push(ref.fullPath);
+          if(file || (image.startsWith('data:image/') && !imageRef)){
+            let source=file;
+            if(!source){
+              const response=await fetch(image);
+              source=await response.blob();
+              if(!source.size || source.size > 5*1024*1024)throw new Error('Foto lama terlalu besar untuk diproses. Pilih dan unggah ulang foto dengan ukuran di bawah 900 KB.');
+            }
+            setHouseStatus('Mengompres foto menjadi JPEG ringan...','working');
+            image=await compressHouseImageToDataUrl(source,450000);
+            imageRef=newHouseImageDocId(type);
+            createdImageRefs.push(imageRef);
+            setHouseStatus('Menyimpan foto ke Firestore gratis...','working');
+            await saveHouseImageDocument(imageRef,image);
             updated.image=image;
-            setHouseStatus('Foto berhasil diunggah. Menyimpan data kartu...','working');
-          } else if(image.startsWith('data:image/')) {
-            // Migrate a legacy inline image to Storage so Firestore does not discard it.
-            const response=await fetch(image);
-            const blob=await response.blob();
-            if(!blob.size || blob.size > 900*1024) throw new Error('Foto lama lebih besar dari 900 KB. Unggah ulang foto dengan ukuran lebih kecil.');
-            const ext=(blob.type.split('/')[1]||'jpeg').replace(/[^a-z0-9]/gi,'')||'jpeg';
-            const path=`uploads/${firebaseAuth.currentUser.uid}/rumah-pompa/${type}/${Date.now()}-migrated.${ext}`;
-            const ref=firebaseStorage.ref(path);
-            await ref.put(blob,{contentType:blob.type||'image/jpeg'});
-            image=await ref.getDownloadURL();
-            uploadedPaths.push(ref.fullPath);
-            updated.image=image;
+            updated.imageRef=imageRef;
+          }else if(typedUrl){
+            updated.image=typedUrl;
+            updated.imageRef='';
           }
 
           data.settings.houseCards=data.settings.houseCards||cloneHouseCards();
           data.settings.houseCards[type]=updated;
           auditLater(data,'UBAH_RUMAH_POMPA',updated.title);
 
-          setHouseStatus('Menyimpan perubahan ke Firebase...','working');
-          const synced=await pushCloudNow(data);
-          if(!synced) throw new Error('house-cloud-save-failed');
+          setHouseStatus('Menyimpan perubahan kartu ke Firestore...','working');
+          mainSaveAttempted=true;
+          const synced=await withTimeout(pushCloudNow(data),30000,'Penyimpanan data rumah pompa melewati batas waktu 30 detik. Periksa koneksi internet dan Firestore Rules.');
+          if(!synced){
+            if(lastCloudSaveError)throw lastCloudSaveError;
+            throw new Error('house-cloud-save-failed');
+          }
 
           localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(data)));
-          setHouseStatus('Berhasil disimpan online.','success');
+          setHouseStatus('Berhasil disimpan online tanpa Firebase Storage.','success');
           toast('Rumah pompa berhasil disimpan online.');
           renderPublic();
           setTimeout(()=>navigateDash('houses'),450);
 
-          // Remove old uploaded image only after the new URL has been saved successfully.
-          const oldImage=base.image;
-          if(oldImage && oldImage!==updated.image && /^https:\/\//i.test(oldImage)){
-            try{
-              const oldRef=firebaseStorage.refFromURL(oldImage);
-              if(oldRef.fullPath.startsWith(`uploads/${firebaseAuth.currentUser.uid}/rumah-pompa/`)) await oldRef.delete();
-            }catch(err){console.warn('Gambar rumah pompa lama belum terhapus:',err)}
+          const oldImageRef=base.imageRef;
+          if(oldImageRef && oldImageRef!==updated.imageRef){
+            deleteHouseImageDocument(oldImageRef).catch(err=>console.warn('Foto rumah pompa lama tidak dapat dihapus:',err));
           }
         }catch(err){
           console.warn('Simpan rumah pompa gagal',err);
-          await Promise.all(uploadedPaths.map(path=>firebaseStorage.ref(path).delete().catch(()=>{})));
+          if(!mainSaveAttempted){
+            await Promise.all(createdImageRefs.map(id=>deleteHouseImageDocument(id).catch(()=>{})));
+          }
           localStorage.setItem(DBKEY,JSON.stringify(original));
           let message='Perubahan rumah pompa belum tersimpan.';
-          if(err?.code==='storage/unauthorized') message='Firebase Storage menolak unggahan. Periksa Storage Rules dan pastikan login admin aktif.';
-          else if(err?.code==='storage/quota-exceeded') message='Kuota Firebase Storage tidak mencukupi.';
-          else if(err?.code==='storage/retry-limit-exceeded') message='Koneksi terputus saat mengunggah. Periksa internet lalu coba lagi.';
-          else if(err?.code==='storage/invalid-format') message='Format foto tidak didukung.';
-          else if(err?.message && err.message!=='house-cloud-save-failed') message=err.message;
-          else if(err?.message==='house-cloud-save-failed') message='Foto berhasil diunggah, tetapi data gagal disimpan ke Firestore. Periksa Firestore Rules dan ukuran dokumen.';
+          if(err?.code==='permission-denied'||err?.code==='firestore/permission-denied') message='Firestore menolak penyimpanan foto. Terbitkan Firestore Rules versi 40 yang menyertakan koleksi houseImages.';
+          else if(err?.code==='resource-exhausted') message='Kuota Firestore gratis atau batas ukuran dokumen terlampaui. Pilih foto yang lebih kecil dan coba lagi.';
+          else if(err?.code==='app/timeout') message=err.message;
+          else if(err?.code==='house-cloud-save-failed') message='Foto sudah diproses, tetapi data kartu gagal disimpan. Periksa Firestore Rules dan koneksi internet.';
+          else if(err?.message) message=err.message;
           setHouseStatus(message,'error');
           toast(message);
         }finally{
@@ -1416,42 +1540,40 @@ function bindDashActions(page,u){
     $$('.removeHouseImage').forEach(btn=>btn.addEventListener('click',async()=>{
       const type=btn.dataset.houseType;
       if(!firebaseAuth?.currentUser||!firebaseDb||!cloudReady)return toast('Masuk sebagai admin dan periksa koneksi Firebase.');
-      const original=getDB(),data=clone(original),oldImage=houseCardsSettings(data)[type].image;
+      const original=getDB(),data=clone(original),card=houseCardsSettings(data)[type],oldImageRef=card.imageRef||'';
       data.settings.houseCards=data.settings.houseCards||cloneHouseCards();
-      data.settings.houseCards[type]={...houseCardsSettings(data)[type],image:''};
+      data.settings.houseCards[type]={...card,image:'',imageRef:''};
       auditLater(data,'HAPUS_GAMBAR_RUMAH_POMPA',type);
       btn.disabled=true;btn.textContent='Menghapus...';
       const status=$(`#houseSaveStatus-${type}`);
-      if(status){status.textContent='Menyimpan penghapusan gambar...';status.className='save-status house-save-status working';}
+      if(status){status.textContent='Menyimpan penghapusan gambar ke Firestore...';status.className='save-status house-save-status working';}
       try{
-        if(!await pushCloudNow(data))throw new Error('house-cloud-save-failed');
+        const ok=await pushCloudNow(data);
+        if(!ok){if(lastCloudSaveError)throw lastCloudSaveError;throw new Error('house-cloud-save-failed');}
         localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(data)));
-        if(oldImage&&/^https:\/\//i.test(oldImage)){
-          try{const ref=firebaseStorage.refFromURL(oldImage);if(ref.fullPath.startsWith(`uploads/${firebaseAuth.currentUser.uid}/rumah-pompa/`))await ref.delete()}catch(err){console.warn('Gambar lama tidak dapat dihapus dari Storage:',err)}
-        }
+        if(oldImageRef)deleteHouseImageDocument(oldImageRef).catch(err=>console.warn('Foto rumah pompa lama tidak dapat dihapus:',err));
         renderPublic();navigateDash('houses');toast('Gambar rumah pompa berhasil dihapus.');
       }catch(err){
         localStorage.setItem(DBKEY,JSON.stringify(original));
-        if(status){status.textContent='Gambar belum dihapus. Periksa koneksi dan Firestore Rules.';status.className='save-status house-save-status error';}
+        if(status){status.textContent=err?.code==='permission-denied'?'Firestore menolak penghapusan. Periksa Firestore Rules.':'Gambar belum dihapus. Periksa koneksi dan Firestore Rules.';status.className='save-status house-save-status error';}
         toast('Penghapusan gambar gagal disimpan online.');
       }finally{btn.disabled=false;btn.textContent='Hapus Gambar Saat Ini';}
     }));
     $$('.resetHouseCard').forEach(btn=>btn.addEventListener('click',async()=>{
       const type=btn.dataset.houseType;if(!confirm('Kembalikan kartu rumah pompa ini ke pengaturan awal?'))return;
       if(!firebaseAuth?.currentUser||!firebaseDb||!cloudReady)return toast('Masuk sebagai admin dan periksa koneksi Firebase.');
-      const original=getDB(),data=clone(original),oldImage=houseCardsSettings(data)[type].image;
+      const original=getDB(),data=clone(original),oldImageRef=houseCardsSettings(data)[type].imageRef||'';
       data.settings.houseCards=data.settings.houseCards||cloneHouseCards();
       data.settings.houseCards[type]={...DEFAULT_HOUSE_CARDS[type]};
       auditLater(data,'RESET_RUMAH_POMPA',type);
       btn.disabled=true;btn.textContent='Memulihkan...';
       try{
-        if(!await pushCloudNow(data))throw new Error('house-cloud-save-failed');
+        const ok=await pushCloudNow(data);
+        if(!ok){if(lastCloudSaveError)throw lastCloudSaveError;throw new Error('house-cloud-save-failed');}
         localStorage.setItem(DBKEY,JSON.stringify(normalizeDB(data)));
-        if(oldImage&&/^https:\/\//i.test(oldImage)){
-          try{const ref=firebaseStorage.refFromURL(oldImage);if(ref.fullPath.startsWith(`uploads/${firebaseAuth.currentUser.uid}/rumah-pompa/`))await ref.delete()}catch(err){console.warn('Gambar lama tidak dapat dihapus dari Storage:',err)}
-        }
+        if(oldImageRef)deleteHouseImageDocument(oldImageRef).catch(err=>console.warn('Foto rumah pompa lama tidak dapat dihapus:',err));
         renderPublic();navigateDash('houses');toast('Kartu rumah pompa berhasil dipulihkan.');
-      }catch(err){localStorage.setItem(DBKEY,JSON.stringify(original));toast('Pemulihan belum tersimpan online.')}
+      }catch(err){localStorage.setItem(DBKEY,JSON.stringify(original));toast('Pemulihan belum tersimpan online. Periksa Firestore Rules.');}
       finally{btn.disabled=false;btn.textContent='Pulihkan Tampilan Awal';}
     }));
     $$('.previewHouseDetail').forEach(btn=>btn.addEventListener('click',()=>{
